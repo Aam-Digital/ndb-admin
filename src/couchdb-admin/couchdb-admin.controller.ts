@@ -16,7 +16,7 @@ export class CouchdbAdminController {
   async updateDocuments(@Body() body: BulkUpdateDto) {
     const url = body.url + '/app';
     const auth = { username: 'admin', password: body.password };
-    const query = { selector: body.query };
+    const query = { selector: body.query, skip: 0, limit: 100000 };
     const res = await firstValueFrom(
       this.http.post<{ docs: { _id: string }[] }>(`${url}/_find`, query, {
         auth,
