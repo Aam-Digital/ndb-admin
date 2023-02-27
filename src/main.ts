@@ -10,9 +10,7 @@ async function bootstrap() {
     .setVersion(process.env.npm_package_version)
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document, {
-    swaggerOptions: { persistAuthorization: true },
-  });
+  SwaggerModule.setup('api', app, document);
   await app.listen(3000);
 }
 bootstrap();
