@@ -47,15 +47,8 @@ export class CouchdbAdminController {
     const editedOrgs = [];
     // Update `credentials.json` using the `collect_credentials.sh` script on the server
     for (const cred of credentials) {
-      const auth = { username: 'admin', password: cred.password };
-      const url = `https://${cred.name}.aam-digital.com/db`;
       const file = `/app/Config:CONFIG_ENTITY`;
-      const config = await firstValueFrom(
-        this.http.get(`${url}/couchdb${file}`, { auth }).pipe(
-          catchError(() => this.http.get(`${url}${file}`, { auth })),
-          map((res) => res.data),
-        ),
-      );
+      const config = await this.getDirectFromDB(cred.name, file, cred.password);
 
       const search = JSON.parse(searchString);
       const replace = JSON.parse(replaceString);
@@ -77,17 +70,37 @@ export class CouchdbAdminController {
 
       if (edited) {
         editedOrgs.push(cred.name);
-        await firstValueFrom(
-          this.http
-            .put(`${url}/couchdb${file}`, config, { auth })
-            .pipe(
-              catchError(() =>
-                this.http.put(`${url}${file}`, config, { auth }),
-              ),
-            ),
-        );
+        await this.putDirectToDB(cred.name, file, config, cred.password);
       }
     }
     return editedOrgs;
+  }
+
+  private async getDirectFromDB(org: string, path: string, password: string) {
+    const auth = { username: 'admin', password };
+    const url = `https://${org}.aam-digital.com/db`;
+    return firstValueFrom(
+      this.http.get(`${url}/couchdb${path}`, { auth }).pipe(
+        catchError(() => this.http.get(`${url}${path}`, { auth })),
+        map((res) => res.data),
+      ),
+    );
+  }
+
+  private async putDirectToDB(
+    org: string,
+    path: string,
+    config,
+    password: string,
+  ) {
+    const auth = { username: 'admin', password };
+    const url = `https://${org}.aam-digital.com/db`;
+    await firstValueFrom(
+      this.http
+        .put(`${url}/couchdb${path}`, config, { auth })
+        .pipe(
+          catchError(() => this.http.put(`${url}${path}`, config, { auth })),
+        ),
+    );
   }
 }
