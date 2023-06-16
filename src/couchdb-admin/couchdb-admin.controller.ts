@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { BulkUpdateDto } from './bulk-update.dto';
 import { HttpService } from '@nestjs/axios';
 import { catchError, firstValueFrom, map } from 'rxjs';
@@ -76,7 +76,7 @@ export class CouchdbAdminController {
     return editedOrgs;
   }
 
-  private async getDirectFromDB(org: string, path: string, password: string) {
+  private getDirectFromDB(org: string, path: string, password: string) {
     const auth = { username: 'admin', password };
     const url = `https://${org}.aam-digital.com/db`;
     return firstValueFrom(
@@ -87,20 +87,114 @@ export class CouchdbAdminController {
     );
   }
 
-  private async putDirectToDB(
+  private putDirectToDB(
     org: string,
     path: string,
     config,
     password: string,
+    method = this.http.put,
   ) {
     const auth = { username: 'admin', password };
     const url = `https://${org}.aam-digital.com/db`;
-    await firstValueFrom(
-      this.http
-        .put(`${url}/couchdb${path}`, config, { auth })
+    return firstValueFrom(
+      method
+        .call(this.http, `${url}/couchdb${path}`, config, { auth })
         .pipe(
-          catchError(() => this.http.put(`${url}${path}`, config, { auth })),
+          catchError(() =>
+            method.call(this.http, `${url}${path}`, config, { auth }),
+          ),
         ),
     );
   }
+
+  @Get('statistics')
+  async getStatistics() {
+    const stats: {
+      name: string;
+      childrenTotal: number;
+      childrenActive: number;
+      users: number;
+    }[] = [];
+    const allUsers =
+      '/_users/_all_docs?startkey="org.couchdb.user:"&endkey="org.couchdb.user:\uffff"';
+    const allChildren =
+      '/app/_all_docs?startkey="Child:"&endkey="Child:\uffff"';
+    const activeChildren = '/app/_find';
+    for (const cred of credentials) {
+      const users = await this.getDirectFromDB(
+        cred.name,
+        allUsers,
+        cred.password,
+      );
+      const children = await this.getDirectFromDB(
+        cred.name,
+        allChildren,
+        cred.password,
+      );
+      const active: any = await this.putDirectToDB(
+        cred.name,
+        activeChildren,
+        activeChildrenFilter,
+        cred.password,
+        this.http.post,
+      );
+      stats.push({
+        name: cred.name,
+        users: users.rows.length,
+        childrenTotal: children.rows.length,
+        childrenActive: active.data.docs.length,
+      });
+    }
+    return stats;
+  }
 }
+
+const activeChildrenFilter = {
+  selector: {
+    _id: {
+      $gt: 'Child:',
+      $lt: 'Child:\uffff',
+    },
+    status: {
+      $or: [
+        {
+          $not: {
+            $eq: 'Dropout',
+          },
+        },
+        {
+          $exists: false,
+        },
+      ],
+    },
+    dropoutDate: {
+      $exists: false,
+    },
+    exit_date: {
+      $exists: false,
+    },
+    active: {
+      $or: [
+        {
+          $exists: false,
+        },
+        {
+          $eq: true,
+        },
+      ],
+    },
+    inactive: {
+      $or: [
+        {
+          $exists: false,
+        },
+        {
+          $eq: false,
+        },
+      ],
+    },
+  },
+  execution_stats: true,
+  limit: 100000,
+  skip: 0,
+};
