@@ -8,6 +8,9 @@ import * as _ from 'lodash';
 
 @Controller('couchdb-admin')
 export class CouchdbAdminController {
+  // Needs to be set manually
+  private keycloakPassword = '<KEYCLOAK_ADMIN_PASSWORD>';
+
   constructor(private http: HttpService) {}
 
   @ApiOperation({
@@ -82,7 +85,7 @@ export class CouchdbAdminController {
     return firstValueFrom(
       this.http.get(`${url}/couchdb${path}`, { auth }).pipe(
         catchError(() => this.http.get(`${url}${path}`, { auth })),
-        map((res) => res.data),
+        map((res) => res.data.rows ?? res.data),
       ),
     );
   }
@@ -97,13 +100,12 @@ export class CouchdbAdminController {
     const auth = { username: 'admin', password };
     const url = `https://${org}.aam-digital.com/db`;
     return firstValueFrom(
-      method
-        .call(this.http, `${url}/couchdb${path}`, config, { auth })
-        .pipe(
-          catchError(() =>
-            method.call(this.http, `${url}${path}`, config, { auth }),
-          ),
+      method.call(this.http, `${url}/couchdb${path}`, config, { auth }).pipe(
+        catchError(() =>
+          method.call(this.http, `${url}${path}`, config, { auth }),
         ),
+        map((res: any) => res.data?.docs),
+      ),
     );
   }
 
@@ -115,16 +117,15 @@ export class CouchdbAdminController {
       childrenActive: number;
       users: number;
     }[] = [];
+    const token = await this.getKeycloakToken();
     const allUsers =
       '/_users/_all_docs?startkey="org.couchdb.user:"&endkey="org.couchdb.user:\uffff"';
     const allChildren =
       '/app/_all_docs?startkey="Child:"&endkey="Child:\uffff"';
     const activeChildren = '/app/_find';
     for (const cred of credentials) {
-      const users = await this.getDirectFromDB(
-        cred.name,
-        allUsers,
-        cred.password,
+      const users = await this.getUsersFromKeycloak(cred.name, token).catch(
+        () => this.getDirectFromDB(cred.name, allUsers, cred.password),
       );
       const children = await this.getDirectFromDB(
         cred.name,
@@ -140,12 +141,39 @@ export class CouchdbAdminController {
       );
       stats.push({
         name: cred.name,
-        users: users.rows.length,
-        childrenTotal: children.rows.length,
-        childrenActive: active.data.docs.length,
+        users: users.length,
+        childrenTotal: children.length,
+        childrenActive: active.length,
       });
     }
     return stats;
+  }
+
+  private getKeycloakToken(): Promise<string> {
+    const body = new URLSearchParams();
+    body.set('username', 'admin');
+    body.set('password', this.keycloakPassword);
+    body.set('grant_type', 'password');
+    body.set('client_id', 'admin-cli');
+    return firstValueFrom(
+      this.http
+        .post<{ access_token: string }>(
+          `https://keycloak.aam-digital.com/realms/master/protocol/openid-connect/token`,
+          body.toString(),
+        )
+        .pipe(map((res) => res.data.access_token)),
+    );
+  }
+
+  private getUsersFromKeycloak(org: string, token: string) {
+    return firstValueFrom(
+      this.http
+        .get<{ access_token: string }>(
+          `https://keycloak.aam-digital.com/admin/realms/${org}/users?enabled=true`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        )
+        .pipe(map((res) => res.data)),
+    );
   }
 }
 
