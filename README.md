@@ -16,7 +16,7 @@ Get statistics of how many children and users are registered.
 
 1. Run the `collect_credentials.sh` script on the server
 2. Copy the results to `credentials.json`
-3. In `couchdb-admin.controller.ts` replace `<KEYCLOAK_ADMIN_PASSWORD>` with the actual password
+3. In `.env` assign the `KEYCLOAK_ADMIN_PASSWORD`
 4. Execute the `/statistics` endpoint in the Swagger UI
 
 ### Bulk update

@@ -5,13 +5,19 @@ import { catchError, firstValueFrom, map } from 'rxjs';
 import { ApiOperation } from '@nestjs/swagger';
 import * as credentials from 'src/assets/credentials.json';
 import * as _ from 'lodash';
+import { ConfigService } from '@nestjs/config';
 
 @Controller('couchdb-admin')
 export class CouchdbAdminController {
   // Needs to be set manually
-  private keycloakPassword = '<KEYCLOAK_ADMIN_PASSWORD>';
+  private keycloakPassword = this.configService.get('KEYCLOAK_ADMIN_PASSWORD');
+  private keycloakUrl = this.configService.get('KEYCLOAK_URL');
+  private domain = this.configService.get('DOMAIN');
 
-  constructor(private http: HttpService) {}
+  constructor(
+    private http: HttpService,
+    private configService: ConfigService,
+  ) {}
 
   @ApiOperation({
     description:
@@ -51,7 +57,7 @@ export class CouchdbAdminController {
     // Update `credentials.json` using the `collect_credentials.sh` script on the server
     for (const cred of credentials) {
       const file = `/app/Config:CONFIG_ENTITY`;
-      const config = await this.getDirectFromDB(cred.name, file, cred.password);
+      const config = await this.getDataFromDB(cred.name, file, cred.password);
 
       const search = JSON.parse(searchString);
       const replace = JSON.parse(replaceString);
@@ -73,15 +79,15 @@ export class CouchdbAdminController {
 
       if (edited) {
         editedOrgs.push(cred.name);
-        await this.putDirectToDB(cred.name, file, config, cred.password);
+        await this.putDataToDB(cred.name, file, config, cred.password);
       }
     }
     return editedOrgs;
   }
 
-  private getDirectFromDB(org: string, path: string, password: string) {
+  private getDataFromDB(org: string, path: string, password: string) {
     const auth = { username: 'admin', password };
-    const url = `https://${org}.aam-digital.com/db`;
+    const url = `https://${org}.${this.domain}/db`;
     return firstValueFrom(
       this.http.get(`${url}/couchdb${path}`, { auth }).pipe(
         catchError(() => this.http.get(`${url}${path}`, { auth })),
@@ -90,19 +96,19 @@ export class CouchdbAdminController {
     );
   }
 
-  private putDirectToDB(
+  private putDataToDB(
     org: string,
     path: string,
-    config,
+    data,
     password: string,
     method = this.http.put,
   ) {
     const auth = { username: 'admin', password };
-    const url = `https://${org}.aam-digital.com/db`;
+    const url = `https://${org}.${this.domain}/db`;
     return firstValueFrom(
-      method.call(this.http, `${url}/couchdb${path}`, config, { auth }).pipe(
+      method.call(this.http, `${url}/couchdb${path}`, data, { auth }).pipe(
         catchError(() =>
-          method.call(this.http, `${url}${path}`, config, { auth }),
+          method.call(this.http, `${url}${path}`, data, { auth }),
         ),
         map((res: any) => res.data?.docs),
       ),
@@ -125,14 +131,14 @@ export class CouchdbAdminController {
     const activeChildren = '/app/_find';
     for (const cred of credentials) {
       const users = await this.getUsersFromKeycloak(cred.name, token).catch(
-        () => this.getDirectFromDB(cred.name, allUsers, cred.password),
+        () => this.getDataFromDB(cred.name, allUsers, cred.password),
       );
-      const children = await this.getDirectFromDB(
+      const children = await this.getDataFromDB(
         cred.name,
         allChildren,
         cred.password,
       );
-      const active: any = await this.putDirectToDB(
+      const active: any = await this.putDataToDB(
         cred.name,
         activeChildren,
         activeChildrenFilter,
@@ -158,7 +164,7 @@ export class CouchdbAdminController {
     return firstValueFrom(
       this.http
         .post<{ access_token: string }>(
-          `https://keycloak.aam-digital.com/realms/master/protocol/openid-connect/token`,
+          `${this.keycloakUrl}/realms/master/protocol/openid-connect/token`,
           body.toString(),
         )
         .pipe(map((res) => res.data.access_token)),
@@ -169,7 +175,7 @@ export class CouchdbAdminController {
     return firstValueFrom(
       this.http
         .get<{ access_token: string }>(
-          `https://keycloak.aam-digital.com/admin/realms/${org}/users?enabled=true`,
+          `${this.keycloakUrl}/admin/realms/${org}/users?enabled=true`,
           { headers: { Authorization: `Bearer ${token}` } },
         )
         .pipe(map((res) => res.data)),
