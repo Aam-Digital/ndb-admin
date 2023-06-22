@@ -9,7 +9,6 @@ import { ConfigService } from '@nestjs/config';
 
 @Controller('couchdb-admin')
 export class CouchdbAdminController {
-  // Needs to be set manually
   private keycloakPassword = this.configService.get('KEYCLOAK_ADMIN_PASSWORD');
   private keycloakUrl = this.configService.get('KEYCLOAK_URL');
   private domain = this.configService.get('DOMAIN');
