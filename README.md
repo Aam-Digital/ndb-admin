@@ -1,4 +1,6 @@
 # Aam Digital admin utilities
+A collection of simple operations to support server administration tasks of (multiple) hosted Aam Digital instances.
+(e.g. bulk search & replace in config files, statistics of entities across instances, ...)
 
 ## Usage
 This is not yet secured with authentication and should only be run locally.
@@ -14,7 +16,7 @@ This is not yet secured with authentication and should only be run locally.
 ### Statistics
 Get statistics of how many children and users are registered.
 
-1. Run the `collect_credentials.sh` script on the server
+1. Copy the `collect_credentials.sh` script to the server and run it from the parent folder container your hosted Aam Digital instances
 2. Copy the results to `credentials.json`
 3. In `.env` assign the `KEYCLOAK_ADMIN_PASSWORD`
 4. Execute the `/statistics` endpoint in the Swagger UI
