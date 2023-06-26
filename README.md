@@ -1,4 +1,6 @@
 # Aam Digital admin utilities
+A collection of simple operations to support server administration tasks of (multiple) hosted Aam Digital instances.
+(e.g. bulk search & replace in config files, statistics of entities across instances, ...)
 
 ## Usage
 This is not yet secured with authentication and should only be run locally.
