@@ -1,0 +1,28 @@
+name: Main Update
+on:
+  push:
+    branches:
+      - main
+jobs:
+  publish-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@master
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Publish image
+        uses: docker/build-push-action@v2
+        with:
+          context: ./
+          file: ./build/Dockerfile
+          builder: ${{ steps.buildx.outputs.name }}
+          push: true
+          tags: aamdigital/ndb-admin:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
