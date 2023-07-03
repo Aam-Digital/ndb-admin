@@ -19,7 +19,7 @@ Get statistics of how many children and users are registered.
 1. Copy the `collect_credentials.sh` script to the server and run it from the parent folder container your hosted Aam Digital instances
 2. Copy the results to `credentials.json`
 3. In `.env` assign the `KEYCLOAK_ADMIN_PASSWORD`
-4. Execute the `/statistics` endpoint in the Swagger UI
+4. Execute the `/couchdb-admin/statistics` endpoint in the Swagger UI
 
 ### Bulk update
 Update all docs that match a query with the provided object.
