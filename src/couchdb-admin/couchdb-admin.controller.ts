@@ -19,7 +19,7 @@ export class CouchdbAdminController {
 
   @ApiOperation({
     description:
-      'Update a bunch a documents that match `query` by assigning `replace` values.',
+      'Update all documents that match `query` by assigning `replace` values.',
   })
   @Post('bulk-update')
   async updateDocuments(@Body() body: BulkUpdateDto) {
@@ -104,6 +104,9 @@ export class CouchdbAdminController {
     );
   }
 
+  @ApiOperation({
+    description: `Get statistics of how many children and users are registered.`,
+  })
   @Get('statistics')
   async getStatistics() {
     const stats: {
