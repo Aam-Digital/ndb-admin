@@ -4,7 +4,6 @@ import { HttpService } from '@nestjs/axios';
 import { catchError, firstValueFrom, map } from 'rxjs';
 import { ApiOperation } from '@nestjs/swagger';
 import * as credentials from 'src/assets/credentials.json';
-import * as _ from 'lodash';
 import { ConfigService } from '@nestjs/config';
 
 @Controller('couchdb-admin')
@@ -58,27 +57,18 @@ export class CouchdbAdminController {
       const file = `/app/Config:CONFIG_ENTITY`;
       const config = await this.getDataFromDB(cred.name, file, cred.password);
 
-      const search = JSON.parse(searchString);
-      const replace = JSON.parse(replaceString);
-      let edited = false;
+      const configString = JSON.stringify(config);
+      const regex = new RegExp(searchString, 'g');
 
-      function dfs(object: any, property: string | number) {
-        const current = object[property];
-        if (_.isEqual(current, search)) {
-          object[property] = replace;
-          edited = true;
-          return;
-        }
-        if (current !== null && typeof current === 'object') {
-          Object.keys(current).forEach((key) => dfs(current, key));
-        }
-      }
-
-      dfs(config, 'data');
-
-      if (edited) {
+      if (configString.match(regex)) {
+        const replaced = configString.replace(regex, replaceString);
         editedOrgs.push(cred.name);
-        await this.putDataToDB(cred.name, file, config, cred.password);
+        await this.putDataToDB(
+          cred.name,
+          file,
+          JSON.parse(replaced),
+          cred.password,
+        );
       }
     }
     return editedOrgs;
