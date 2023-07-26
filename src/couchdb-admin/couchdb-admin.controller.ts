@@ -43,6 +43,26 @@ export class CouchdbAdminController {
   }
 
   @ApiOperation({
+    description: 'Find configs where "search" is included.',
+  })
+  @Get('search-configs')
+  async findConfigs(@Query('search') searchString: string) {
+    const editedOrgs: string[] = [];
+    for (const cred of credentials) {
+      const file = `/app/Config:CONFIG_ENTITY`;
+      const config = await this.getDataFromDB(cred.name, file, cred.password);
+
+      const configString = JSON.stringify(config);
+      const regex = new RegExp(searchString, 'g');
+
+      if (configString.match(regex)) {
+        editedOrgs.push(cred.name);
+      }
+    }
+    return editedOrgs;
+  }
+
+  @ApiOperation({
     description:
       'Replace the occurrences of "search" with "replace" in all configs.',
   })
