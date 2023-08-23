@@ -29,7 +29,7 @@ export class CouchdbService {
     data,
     password: string,
     method = this.http.put,
-  ) {
+  ): Promise<any> {
     const auth = { username: 'admin', password };
     const url = `https://${org}.${this.domain}/db`;
     return firstValueFrom(
@@ -37,7 +37,7 @@ export class CouchdbService {
         catchError(() =>
           method.call(this.http, `${url}${path}`, data, { auth }),
         ),
-        map((res: any) => res.data?.docs),
+        map(({ data }) => (data?.docs ? data.docs : data)),
       ),
     );
   }
