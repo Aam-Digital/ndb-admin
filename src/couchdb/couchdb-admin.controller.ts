@@ -48,7 +48,7 @@ export class CouchdbAdminController {
     const editedOrgs: string[] = [];
     for (const cred of credentials) {
       const file = `/app/Config:CONFIG_ENTITY`;
-      const config = await this.couchdbService.getDataFromDB(
+      const config = await this.couchdbService.get(
         cred.name,
         file,
         cred.password,
@@ -77,7 +77,7 @@ export class CouchdbAdminController {
     // Update `credentials.json` using the `collect_credentials.sh` script on the server
     for (const cred of credentials) {
       const file = `/app/Config:CONFIG_ENTITY`;
-      const config = await this.couchdbService.getDataFromDB(
+      const config = await this.couchdbService.get(
         cred.name,
         file,
         cred.password,
@@ -89,7 +89,7 @@ export class CouchdbAdminController {
       if (configString.match(regex)) {
         const replaced = configString.replace(regex, replaceString);
         editedOrgs.push(cred.name);
-        await this.couchdbService.sendDataToDB(
+        await this.couchdbService.put(
           cred.name,
           file,
           JSON.parse(replaced),
@@ -121,19 +121,18 @@ export class CouchdbAdminController {
       const users = await this.keycloakService
         .getUsersFromKeycloak(cred.name, token)
         .catch(() =>
-          this.couchdbService.getDataFromDB(cred.name, allUsers, cred.password),
+          this.couchdbService.get(cred.name, allUsers, cred.password),
         );
-      const children = await this.couchdbService.getDataFromDB(
+      const children = await this.couchdbService.get(
         cred.name,
         allChildren,
         cred.password,
       );
-      const active: any = await this.couchdbService.sendDataToDB(
+      const active: any = await this.couchdbService.post(
         cred.name,
         activeChildren,
         activeChildrenFilter,
         cred.password,
-        this.http.post,
       );
       stats.push({
         name: cred.name,

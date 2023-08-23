@@ -12,7 +12,7 @@ export class CouchdbService {
     private configService: ConfigService,
   ) {}
 
-  getDataFromDB(org: string, path: string, password: string) {
+  get(org: string, path: string, password: string) {
     const auth = { username: 'admin', password };
     const url = `https://${org}.${this.domain}/db`;
     return firstValueFrom(
@@ -23,20 +23,35 @@ export class CouchdbService {
     );
   }
 
-  sendDataToDB(
+  put(
     org: string,
     path: string,
     data,
     password: string,
-    method = this.http.put,
+    headers?: any,
   ): Promise<any> {
     const auth = { username: 'admin', password };
     const url = `https://${org}.${this.domain}/db`;
     return firstValueFrom(
-      method.call(this.http, `${url}/couchdb${path}`, data, { auth }).pipe(
-        catchError(() =>
-          method.call(this.http, `${url}${path}`, data, { auth }),
-        ),
+      this.http.put(`${url}/couchdb${path}`, data, { auth, headers }).pipe(
+        catchError(() => this.http.put(`${url}${path}`, data, { auth })),
+        map(({ data }) => (data?.docs ? data.docs : data)),
+      ),
+    );
+  }
+
+  post(
+    org: string,
+    path: string,
+    data,
+    password: string,
+    headers?: any,
+  ): Promise<any> {
+    const auth = { username: 'admin', password };
+    const url = `https://${org}.${this.domain}/db`;
+    return firstValueFrom(
+      this.http.post(`${url}/couchdb${path}`, data, { auth, headers }).pipe(
+        catchError(() => this.http.post(`${url}${path}`, data, { auth })),
         map(({ data }) => (data?.docs ? data.docs : data)),
       ),
     );
