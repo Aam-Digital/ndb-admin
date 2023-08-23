@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { CouchdbAdminController } from './couchdb-admin/couchdb-admin.controller';
+import { CouchdbAdminController } from './couchdb/couchdb-admin.controller';
 import { HttpModule } from '@nestjs/axios';
 import { ConfigModule } from '@nestjs/config';
 
