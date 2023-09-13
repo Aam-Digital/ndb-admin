@@ -3,6 +3,7 @@ import { Couchdb, CouchdbService } from './couchdb.service';
 import * as credentials from '../assets/credentials.json';
 import { ConfigService } from '@nestjs/config';
 import * as sharp from 'sharp';
+import { ApiOperation } from '@nestjs/swagger';
 
 @Controller('migration')
 export class MigrationController {
@@ -12,6 +13,11 @@ export class MigrationController {
     private couchdbService: CouchdbService,
     private configService: ConfigService,
   ) {}
+
+  @ApiOperation({
+    description:
+      'Transform site-settings config from the central config doc into its own SiteSettings entity.',
+  })
   @Post('site-settings')
   async createSiteSettings() {
     return await this.couchdbService.runForAllOrgs(
@@ -36,7 +42,7 @@ export class MigrationController {
         .then((fileName) => (siteSettings['logo'] = fileName))
         .catch((err) => console.error('ERROR uploading logo', err));
     }
-    await couchdb.put('/app/SiteSettings:general', siteSettings);
+    await couchdb.put('/app/SiteSettings:global', siteSettings);
     // delete deprecated attribute
     delete config.data.appConfig;
     await couchdb.put(configPath, config);
