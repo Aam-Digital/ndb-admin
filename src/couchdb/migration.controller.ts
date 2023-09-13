@@ -3,6 +3,7 @@ import { CouchdbService } from './couchdb.service';
 import * as credentials from '../assets/credentials.json';
 import { ConfigService } from '@nestjs/config';
 import * as sharp from 'sharp';
+import { ApiOperation } from "@nestjs/swagger";
 
 @Controller('migration')
 export class MigrationController {
@@ -12,6 +13,10 @@ export class MigrationController {
     private couchDB: CouchdbService,
     private configService: ConfigService,
   ) {}
+
+  @ApiOperation({
+    description: 'Transform site-settings config from the central config doc into its own SiteSettings entity.',
+  })
   @Post('site-settings')
   async createSiteSettings() {
     const results = {};
@@ -41,7 +46,7 @@ export class MigrationController {
     }
     await this.couchDB.put(
       name,
-      '/app/SiteSettings:general',
+      '/app/SiteSettings:global',
       siteSettings,
       password,
     );
