@@ -61,7 +61,7 @@ export class MigrationController {
     const resizedBlob = new Blob([new Uint8Array(resizedLogo as any)], {
       type: logo.type,
     });
-    const attachmentsPath = '/app-attachments/SiteSettings:general';
+    const attachmentsPath = '/app-attachments/SiteSettings:global';
     const att = await couchdb.put(attachmentsPath, {});
     await couchdb.put(attachmentsPath + `/logo?rev=${att.rev}`, resizedBlob);
     // return filename
