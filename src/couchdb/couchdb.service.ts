@@ -3,6 +3,9 @@ import { catchError, firstValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 
+/**
+ * Service facilitating access to specific CouchDB databases.
+ */
 @Injectable()
 export class CouchdbService {
   private domain = this.configService.get('DOMAIN');
@@ -12,48 +15,91 @@ export class CouchdbService {
     private configService: ConfigService,
   ) {}
 
-  get(org: string, path: string, password: string) {
-    const auth = { username: 'admin', password };
-    const url = `https://${org}.${this.domain}/db`;
+  getCouchdb(org: string, password: string) {
+    return new Couchdb(this.http, this.domain, org, password);
+  }
+
+  /**
+   * Run a function for all given databases.
+   * @param credentials
+   * @param callback A function that is called repeatedly, receiving the Couchdb instance for each database;
+   *                  return values are mapped into a key-value return object (key = credentials.name).
+   */
+  async runForAllOrgs(
+    credentials: { name: string; password: string }[],
+    callback: (couchdb: Couchdb) => Promise<any>,
+  ) {
+    const results = {};
+    await Promise.all(
+      credentials.map((cred) => {
+        callback(this.getCouchdb(cred.name, cred.password))
+          .then((res) => (results[cred.name] = res))
+          .catch((err) =>
+            console.error('ERROR processing for: ' + cred.name, err),
+          );
+      }),
+    );
+    return results;
+  }
+}
+
+/**
+ * Accessor to one specific CouchDB database
+ * providing methods to interact with data.
+ */
+export class Couchdb {
+  private auth: { username: string; password: string };
+  private baseUrl: string;
+
+  constructor(
+    private http: HttpService,
+    private domain: string,
+    public org: string,
+    private password: string,
+  ) {
+    this.auth = { username: 'admin', password: this.password };
+    this.baseUrl = `https://${this.org}.${this.domain}/db`;
+  }
+
+  get(path: string) {
+    const httpConfig = { auth: this.auth };
     return firstValueFrom(
-      this.http.get(`${url}/couchdb${path}`, { auth }).pipe(
-        catchError(() => this.http.get(`${url}${path}`, { auth })),
+      this.http.get(`${this.baseUrl}/couchdb${path}`, httpConfig).pipe(
+        catchError(() => this.http.get(`${this.baseUrl}${path}`, httpConfig)),
         map((res) => res.data.rows ?? res.data),
       ),
     );
   }
 
-  put(
-    org: string,
-    path: string,
-    data,
-    password: string,
-    headers?: any,
-  ): Promise<any> {
-    const auth = { username: 'admin', password };
-    const url = `https://${org}.${this.domain}/db`;
+  put(path: string, data, headers?: any): Promise<any> {
     return firstValueFrom(
-      this.http.put(`${url}/couchdb${path}`, data, { auth, headers }).pipe(
-        catchError(() => this.http.put(`${url}${path}`, data, { auth })),
-        map(({ data }) => (data?.docs ? data.docs : data)),
-      ),
+      this.http
+        .put(`${this.baseUrl}/couchdb${path}`, data, {
+          auth: this.auth,
+          headers,
+        })
+        .pipe(
+          catchError(() =>
+            this.http.put(`${this.baseUrl}${path}`, data, { auth: this.auth }),
+          ),
+          map(({ data }) => (data?.docs ? data.docs : data)),
+        ),
     );
   }
 
-  post(
-    org: string,
-    path: string,
-    data,
-    password: string,
-    headers?: any,
-  ): Promise<any> {
-    const auth = { username: 'admin', password };
-    const url = `https://${org}.${this.domain}/db`;
+  post(path: string, data, headers?: any): Promise<any> {
     return firstValueFrom(
-      this.http.post(`${url}/couchdb${path}`, data, { auth, headers }).pipe(
-        catchError(() => this.http.post(`${url}${path}`, data, { auth })),
-        map(({ data }) => (data?.docs ? data.docs : data)),
-      ),
+      this.http
+        .post(`${this.baseUrl}/couchdb${path}`, data, {
+          auth: this.auth,
+          headers,
+        })
+        .pipe(
+          catchError(() =>
+            this.http.post(`${this.baseUrl}${path}`, data, { auth: this.auth }),
+          ),
+          map(({ data }) => (data?.docs ? data.docs : data)),
+        ),
     );
   }
 }
