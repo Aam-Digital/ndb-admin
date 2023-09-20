@@ -50,7 +50,7 @@ export class CouchdbAdminController {
         const regex = new RegExp(searchString, 'g');
 
         if (configString.match(regex)) {
-          return 'edited';
+          return 'matching';
         }
       },
     );
