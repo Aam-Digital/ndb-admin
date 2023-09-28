@@ -31,13 +31,13 @@ export class CouchdbService {
   ) {
     const results = {};
     await Promise.all(
-      credentials.map((cred) => {
+      credentials.map((cred) =>
         callback(this.getCouchdb(cred.name, cred.password))
           .then((res) => (results[cred.name] = res))
           .catch((err) =>
             console.error('ERROR processing for: ' + cred.name, err),
-          );
-      }),
+          ),
+      ),
     );
     return results;
   }

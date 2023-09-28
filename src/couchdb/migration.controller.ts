@@ -35,7 +35,7 @@ export class MigrationController {
     const siteSettings = {
       siteName: uiConfig.site_name,
       displayLanguageSelect: uiConfig.displayLanguageSelect,
-      language: uiConfig.default_language,
+      defaultLanguage: uiConfig.default_language,
     };
     if (uiConfig.logo_path) {
       await this.uploadLogo(uiConfig.logo_path, couchdb)
@@ -46,7 +46,7 @@ export class MigrationController {
     // delete deprecated attribute
     delete config.data.appConfig;
     await couchdb.put(configPath, config);
-    console.log('migrated', name);
+    console.log('migrated', couchdb.org);
     return siteSettings;
   }
 
