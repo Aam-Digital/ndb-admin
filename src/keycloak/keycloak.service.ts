@@ -6,7 +6,7 @@ import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class KeycloakService {
   private keycloakPassword = this.configService.get('KEYCLOAK_ADMIN_PASSWORD');
-  private keycloakUrl = this.configService.get('KEYCLOAK_URL');
+  keycloakUrl = this.configService.get('KEYCLOAK_URL');
   constructor(
     private http: HttpService,
     private configService: ConfigService,
