@@ -2,7 +2,7 @@ import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery } from '@nestjs/swagger';
 import * as credentials from 'src/assets/credentials.json';
 import { Couchdb, CouchdbService } from './couchdb.service';
-import { KeycloakService } from './keycloak.service';
+import { KeycloakService } from '../keycloak/keycloak.service';
 import { BulkUpdateDto } from './bulk-update.dto';
 
 @Controller('couchdb-admin')
