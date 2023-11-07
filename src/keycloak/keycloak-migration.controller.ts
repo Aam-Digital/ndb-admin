@@ -4,11 +4,20 @@ import { HttpService } from '@nestjs/axios';
 import { firstValueFrom, map } from 'rxjs';
 import { RealmConfig } from './realm-config.dto';
 import { ClientConfig } from './client-config.dto';
+import { ApiOperation } from '@nestjs/swagger';
 
 @Controller('keycloak-migration')
 export class KeycloakMigrationController {
   private config;
   constructor(private keycloak: KeycloakService, private http: HttpService) {}
+
+  @ApiOperation({
+    description: `
+      Updates all non-master realms with the new provided config.
+      This currently only includes the top level realm config as well as the client scopes.
+      Some things like authentication flows are not supported and need to be migrated manually.
+    `,
+  })
   @Post('realms')
   migrateRealms(@Body() realmConfig: RealmConfig) {
     return this.runForAllRealms((realm) =>
@@ -16,6 +25,13 @@ export class KeycloakMigrationController {
     );
   }
 
+  @ApiOperation({
+    description: `
+      Update the 'app' client of each non-master realm with the provided config.
+      This is done by deleting the existing client and creating a new one with the new config.
+      All custom configuration of the client will be lost.
+    `,
+  })
   @Post('clients')
   migrateClients(@Body() clientConfig: ClientConfig) {
     return this.runForAllRealms((realm) =>
