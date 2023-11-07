@@ -1,17 +1,8 @@
 export class RealmConfig {
+  realm: string;
   clientScopes: ClientScope[];
-  authenticationFlows: AuthenticationFlow[];
-  authenticatorConfig: AuthenticationConfig[];
 }
 
 class ClientScope {
   name: string;
-}
-
-class AuthenticationFlow {
-  alias: string;
-}
-
-class AuthenticationConfig {
-  alias: string;
 }
