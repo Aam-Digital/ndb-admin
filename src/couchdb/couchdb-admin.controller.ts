@@ -38,12 +38,21 @@ export class CouchdbAdminController {
   @ApiOperation({
     description: 'Find configs where "search" is included.',
   })
+  @ApiQuery({
+    name: 'docId',
+    required: false,
+    description:
+      '_id of the document in the database to be edited. By default the config entity is targeted.',
+  })
   @Get('search-configs')
-  async findConfigs(@Query('search') searchString: string) {
+  async findConfigs(
+    @Query('search') searchString: string,
+    @Query('docId') docId?: string,
+  ) {
     return await this.couchdbService.runForAllOrgs(
       credentials,
       async (couchdb: Couchdb) => {
-        const file = `/app/Config:CONFIG_ENTITY`;
+        const file = '/app/' + (docId ?? 'Config:CONFIG_ENTITY');
         const config = await couchdb.get(file);
 
         const configString = JSON.stringify(config);
