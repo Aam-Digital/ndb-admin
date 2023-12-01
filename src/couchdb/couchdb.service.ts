@@ -34,9 +34,10 @@ export class CouchdbService {
       credentials.map((cred) =>
         callback(this.getCouchdb(cred.name, cred.password))
           .then((res) => (results[cred.name] = res))
-          .catch((err) =>
-            console.error('ERROR processing for: ' + cred.name, err),
-          ),
+          .catch((err) => {
+            console.error('ERROR processing for: ' + cred.name, err);
+            results[cred.name] = 'ERROR see logs';
+          }),
       ),
     );
     return results;
