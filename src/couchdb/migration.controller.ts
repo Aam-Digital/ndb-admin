@@ -16,15 +16,39 @@ export class MigrationController {
 
   @ApiOperation({
     description:
+      'Extract report configurations from config to own individual entities.',
+  })
+  @Post('report-entities')
+  migrateReportsToEntities() {
+    return this.couchdbService.runForAllOrgs(credentials, async (couchdb) => {
+      const configPath = '/app/Config:CONFIG_ENTITY';
+      const config = await couchdb.get(configPath);
+      const res = Object.entries<any>(config.data).find(
+        ([_, val]) => val.component === 'Reporting',
+      );
+      if (!res) {
+        // No report config
+        return 'unmodified';
+      }
+      const reports: { title: string }[] = config.data[res[0]].config.reports;
+      await Promise.all(
+        reports.map((report) => {
+          const reportId = report.title.replace(' ', '');
+          return couchdb.put(`/app/ReportConfig:${reportId}`, report);
+        }),
+      );
+      delete config.data[res[0]].config;
+      return couchdb.put(configPath, config);
+    });
+  }
+  @ApiOperation({
+    description:
       'Transform site-settings config from the central config doc into its own SiteSettings entity.',
   })
   @Post('site-settings')
   async createSiteSettings() {
-    return await this.couchdbService.runForAllOrgs(
-      credentials,
-      async (couchdb: Couchdb) => {
-        return this.migrateUiConfigToSettings(couchdb);
-      },
+    return this.couchdbService.runForAllOrgs(credentials, (couchdb: Couchdb) =>
+      this.migrateUiConfigToSettings(couchdb),
     );
   }
 
