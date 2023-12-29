@@ -14,6 +14,82 @@ export class MigrationController {
     private configService: ConfigService,
   ) {}
 
+  @Post('entity-ids')
+  migrateEntityIds() {
+    /**
+     * - Collect built in entity references √
+     * - Update with customer config
+     * - fetch all entities and update ID if necessary
+     * - Also migrate createdBy and updatedBy
+     */
+    const defaultReferences = {
+      Note: { children: 'Child', authors: 'User', schools: 'School' },
+      ChildSchoolRelation: { childId: 'Child', schoolId: 'School' },
+      Aser: { child: 'Child' },
+      HealthCheck: { child: 'Child' },
+      RecurringActivity: {
+        participants: 'Child',
+        linkedGroups: 'School',
+        excludedParticipants: 'Child',
+        assignedTo: 'User',
+      },
+      EventNote: { children: 'Child', authors: 'User', schools: 'School' },
+      HistoricalEntityData: { relatedEntity: 'Child' },
+      Todo: {
+        assignedTo: 'User',
+        relatedEntities: ['Child', 'School', 'RecurringActivity'],
+      },
+    };
+    return this.couchdbService.runForAllOrgs(credentials, async (couchdb) => {
+      const results = Object.entries(defaultReferences).map(
+        async ([entity, references]) => {
+          const entities = await couchdb.getAll(entity);
+          const updated = this.updateEntities(entities, references);
+          return couchdb.putAll(updated);
+        },
+      );
+      return Promise.all(results);
+    });
+  }
+
+  private updateEntities(
+    entities: any[],
+    refs: { [key: string]: string | string[] },
+  ): any[] {
+    const updated = entities.map((entity) => {
+      const res = { ...entity };
+      for (const [prop, additional] of Object.entries(refs)) {
+        if (typeof additional !== 'string') {
+          // Multiple entity types should already have full ID
+          return entity;
+        }
+        if (res[prop]) {
+          const val = res[prop];
+          if (Array.isArray(val)) {
+            res[prop] = val.map((id) => this.createPrefixedId(additional, id));
+          } else {
+            res[prop] = this.createPrefixedId(additional, val);
+          }
+        }
+      }
+      return res;
+    });
+    return updated;
+  }
+
+  private createPrefixedId(entity: string, id: string) {
+    const prefix = entity + ':';
+    if (id.includes(':')) {
+      if (id.startsWith(prefix)) {
+        return id;
+      } else {
+        throw new Error(`Invalid ID for entity "${entity}": ${id}`);
+      }
+    } else {
+      return prefix + id;
+    }
+  }
+
   @ApiOperation({
     description:
       'Extract report configurations from config to own individual entities.',

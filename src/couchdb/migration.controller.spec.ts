@@ -11,6 +11,8 @@ describe('MigrationController', () => {
     couchdb = {
       get: () => undefined,
       put: () => undefined,
+      getAll: () => undefined,
+      putAll: () => undefined,
     } as any;
     const module: TestingModule = await Test.createTestingModule({
       controllers: [MigrationController],
@@ -95,5 +97,29 @@ describe('MigrationController', () => {
     await controller.migrateReportsToEntities();
 
     expect(couchdb.put).not.toHaveBeenCalled();
+  });
+
+  it('should update entity IDs with built-in references', async () => {
+    const aser = {
+      _id: 'Aser:1',
+      _rev: '1-somerev',
+      childId: ['1234'],
+      date: '2022-02-03',
+    };
+
+    jest
+      .spyOn(couchdb, 'getAll')
+      .mockResolvedValue([JSON.parse(JSON.stringify(aser))]);
+    jest.spyOn(couchdb, 'putAll').mockResolvedValue(undefined);
+
+    await controller.migrateEntityIds();
+
+    expect(couchdb.getAll).toHaveBeenCalledWith('Aser');
+    expect(couchdb.putAll).toHaveBeenCalledWith([
+      {
+        ...aser,
+        childId: ['Child:1234'],
+      },
+    ]);
   });
 });
