@@ -51,15 +51,53 @@ export class MigrationController {
       },
     };
     return this.couchdbService.runForAllOrgs(credentials, async (couchdb) => {
-      const results = Object.entries(defaultReferences).map(
+      const updatedReferences = await this.applyConfig(
+        defaultReferences,
+        couchdb,
+      );
+      const results = Object.entries(updatedReferences).map(
         async ([entity, references]) => {
           const entities = await couchdb.getAll(entity);
           const updated = this.updateEntities(entities, references);
-          return couchdb.putAll(updated);
+          if (updated.length > 0) {
+            return couchdb.putAll(updated);
+          }
         },
       );
       return Promise.all(results);
     });
+  }
+
+  private async applyConfig(
+    defaultEntities: EntityProperties,
+    couchdb: Couchdb,
+  ): Promise<EntityProperties> {
+    const updatedEntities: EntityProperties = JSON.parse(
+      JSON.stringify(defaultEntities),
+    );
+    const config: Config = await couchdb
+      .get('app/Config:CONFIG_ENTITY')
+      .catch(() => ({ data: {} }));
+    Object.entries(config.data)
+      .filter(([key]) => key.startsWith('entity:'))
+      .forEach(([key, entityConfig]) => {
+        const entity = key.split(':').pop();
+        if (!updatedEntities[entity]) {
+          // New entity which might extend another
+          updatedEntities[entity] = entityConfig.extends
+            ? { ...updatedEntities[entityConfig.extends] }
+            : {};
+        }
+        const entityObj = updatedEntities[entity];
+        entityConfig.attributes
+          .filter(
+            ({ schema }) =>
+              schema.dataType === 'entity' ||
+              schema.dataType === 'entity-array',
+          )
+          .forEach(({ name, schema }) => (entityObj[name] = schema.additional));
+      });
+    return updatedEntities;
   }
 
   private updateEntities(
@@ -197,3 +235,20 @@ export interface UiConfig {
   default_language?: string;
   site_name?: string;
 }
+
+type EntityProperties = {
+  [key: string]: { [key: string]: string | string[] };
+};
+
+type Config = {
+  data: {
+    // Entity config if key is "entity:..."
+    [key: string]: {
+      extends?: string;
+      attributes: {
+        name: string;
+        schema: { dataType: string; additional: string | string[] };
+      }[];
+    };
+  };
+};

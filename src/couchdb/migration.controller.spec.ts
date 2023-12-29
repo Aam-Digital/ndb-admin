@@ -285,7 +285,127 @@ describe('MigrationController', () => {
       },
     ]);
   });
-  it('should should references which are defined through custom config', async () => {});
+
+  it('should update references which are defined through custom config', async () => {
+    const config = {
+      _id: 'Config:CONFIG_ENTITY',
+      data: {
+        // edited existing relation
+        'entity:Note': {
+          attributes: [
+            {
+              name: 'children',
+              schema: {
+                dataType: 'entity-array',
+                additional: 'Child',
+                label: 'Mentees',
+                editComponent: 'EditAttendance',
+              },
+            },
+            {
+              name: 'schools',
+              schema: {
+                dataType: 'entity-array',
+                additional: 'School',
+                label: 'Mentor:innen',
+              },
+            },
+            {
+              name: 'relatedEntities',
+              schema: {
+                dataType: 'entity-array',
+                additional: 'ChildSchoolRelation',
+                label: 'Patenschaft/en',
+              },
+            },
+          ],
+        },
+        // existing entity with new relations
+        'entity:Child': {
+          attributes: [
+            {
+              name: 'fieldCoordinator',
+              schema: {
+                dataType: 'entity',
+                label: 'Name of the field coordinator filing the form',
+                additional: 'User',
+                defaultValue: '$current_user',
+              },
+            },
+          ],
+        },
+        // new entity with new relations
+        'entity:MonthlyAttendance': {
+          extends: 'HistoricalEntityData',
+          attributes: [
+            {
+              name: 'reporter',
+              schema: {
+                label: 'Taai',
+                dataType: 'entity',
+                additional: 'User',
+                defaultValue: '$current_user',
+              },
+            },
+          ],
+        },
+      },
+    };
+    const child = {
+      _id: 'Child:1',
+      name: 'New child',
+      fieldCoordinator: 'test',
+    };
+    const note = {
+      _id: 'Note:2',
+      authors: ['Test'],
+      children: ['1', '2'],
+      schools: ['2', '3'],
+      relatedEntities: ['6', '7'],
+    };
+    const monthlyAttendance = {
+      _id: 'MonthlyAttendance:3',
+      date: '2022-04-11',
+      relatedEntity: '1',
+      reporter: 'test',
+    };
+    const recurringActivity = {
+      _id: 'RecurringActivity:4',
+      title: 'Some activity',
+      participants: ['1'],
+      linkedGroups: ['2'],
+      excludedParticipants: [],
+      assignedTo: 'test',
+    };
+    mockDb([config, child, note, monthlyAttendance, recurringActivity]);
+
+    await controller.migrateEntityIds();
+
+    expect(couchdb.putAll).toHaveBeenCalledWith([
+      { ...child, fieldCoordinator: 'User:test' },
+    ]);
+    expect(couchdb.putAll).toHaveBeenCalledWith([
+      {
+        ...note,
+        authors: ['User:Test'],
+        children: ['Child:1', 'Child:2'],
+        schools: ['School:2', 'School:3'],
+        relatedEntities: ['ChildSchoolRelation:6', 'ChildSchoolRelation:7'],
+      },
+    ]);
+    expect(couchdb.putAll).toHaveBeenCalledWith([
+      { ...monthlyAttendance, relatedEntity: 'Child:1', reporter: 'User:test' },
+    ]);
+    expect(couchdb.putAll).toHaveBeenCalledWith([
+      {
+        ...recurringActivity,
+        participants: ['Child:1'],
+        linkedGroups: ['School:2'],
+        assignedTo: 'User:test',
+      },
+    ]);
+    expect(couchdb.putAll).toHaveBeenCalledTimes(4);
+  });
 
   function mockDb(docs: { _id: string }[]) {
     jest
@@ -297,6 +417,13 @@ describe('MigrationController', () => {
             .map((doc) => JSON.parse(JSON.stringify(doc))),
         ),
       );
+    jest.spyOn(couchdb, 'get').mockImplementation((path) => {
+      const id = path.split('/').pop();
+      const found = docs.find(({ _id }) => _id === id);
+      return found
+        ? Promise.resolve(JSON.parse(JSON.stringify(found)))
+        : Promise.reject();
+    });
     jest.spyOn(couchdb, 'putAll').mockResolvedValue(undefined);
   }
 });
