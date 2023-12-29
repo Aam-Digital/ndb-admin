@@ -224,7 +224,67 @@ describe('MigrationController', () => {
       },
     ]);
   });
-  it('should update the user ID in "created" and "updated"', async () => {});
+
+  it('should update the user ID in "created" and "updated"', async () => {
+    const healthCheck = {
+      _id: 'HealthCheck:1',
+      child: '1',
+      height: 100,
+      weight: 40,
+      created: {
+        at: '2023-10-23T17:10:40.218Z',
+        by: 'support',
+      },
+      updated: {
+        at: '2023-10-23T17:10:40.218Z',
+        by: 'support',
+      },
+    };
+    // Entity type without other relations
+    const user = {
+      _id: 'User:demo',
+      name: 'demo',
+      created: {
+        at: '2023-10-23T17:10:40.218Z',
+        by: 'support',
+      },
+      updated: {
+        at: '2023-10-23T17:10:40.218Z',
+        by: 'support',
+      },
+    };
+    mockDb([healthCheck, user]);
+
+    await controller.migrateEntityIds();
+
+    expect(couchdb.putAll).toHaveBeenCalledWith([
+      {
+        ...healthCheck,
+        child: 'Child:1',
+        created: {
+          at: '2023-10-23T17:10:40.218Z',
+          by: 'User:support',
+        },
+        updated: {
+          at: '2023-10-23T17:10:40.218Z',
+          by: 'User:support',
+        },
+      },
+    ]);
+    expect(couchdb.putAll).toHaveBeenCalledWith([
+      {
+        ...user,
+        created: {
+          at: '2023-10-23T17:10:40.218Z',
+          by: 'User:support',
+        },
+        updated: {
+          at: '2023-10-23T17:10:40.218Z',
+          by: 'User:support',
+        },
+      },
+    ]);
+  });
   it('should should references which are defined through custom config', async () => {});
 
   function mockDb(docs: { _id: string }[]) {

@@ -24,7 +24,14 @@ export class MigrationController {
      * - Also migrate createdBy and updatedBy
      */
     const defaultReferences = {
+      Config: {},
+      ConfigurableEnum: {},
+      SiteSettings: {},
+      User: {},
+      Child: {},
+      School: {},
       Note: { children: 'Child', authors: 'User', schools: 'School' },
+      TimePeriod: {},
       ChildSchoolRelation: { childId: 'Child', schoolId: 'School' },
       Aser: { child: 'Child' },
       HealthCheck: { child: 'Child' },
@@ -35,7 +42,9 @@ export class MigrationController {
         assignedTo: 'User',
       },
       EventNote: { children: 'Child', authors: 'User', schools: 'School' },
+      EducationalMaterial: {},
       HistoricalEntityData: { relatedEntity: 'Child' },
+      ProgressDashboardConfig: {},
       Todo: {
         assignedTo: 'User',
         relatedEntities: ['Child', 'School', 'RecurringActivity'],
@@ -59,6 +68,7 @@ export class MigrationController {
   ): any[] {
     const updated = entities.map((entity) => {
       const res = { ...entity };
+      // migrate properties
       for (const [prop, additional] of Object.entries(refs)) {
         if (typeof additional !== 'string') {
           // Multiple entity types should already have full ID
@@ -73,8 +83,19 @@ export class MigrationController {
           }
         }
       }
+
+      // migrate 'create'/'updated' property
+      ['created', 'updated'].forEach((prop) => {
+        if (res[prop]?.by) {
+          res[prop] = {
+            ...res[prop],
+            by: this.createPrefixedId('User', res[prop].by),
+          };
+        }
+      });
       return res;
     });
+    // filter unmodified
     return updated.filter((entity, i) => !isEqual(entity, entities[i]));
   }
 
