@@ -72,6 +72,24 @@ export class Couchdb {
     );
   }
 
+  allDocs(prefix: string, db = 'app') {
+    const body = {
+      include_docs: true,
+      startkey: prefix + ':',
+      endkey: prefix + ':\ufff0',
+    };
+    const path = `${db}/_all_docs`;
+    const headers = { auth: this.auth };
+    return firstValueFrom(
+      this.http.post(`${this.baseUrl}/couchdb/${path}`, body, headers).pipe(
+        catchError(() =>
+          this.http.put(`${this.baseUrl}/${path}`, body, headers),
+        ),
+        map(({ data }) => data?.rows.map(({ doc }) => doc)),
+      ),
+    );
+  }
+
   put(path: string, data, headers?: any): Promise<any> {
     return firstValueFrom(
       this.http
