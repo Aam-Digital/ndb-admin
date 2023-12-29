@@ -102,24 +102,141 @@ describe('MigrationController', () => {
   it('should update entity IDs with built-in references', async () => {
     const aser = {
       _id: 'Aser:1',
-      _rev: '1-somerev',
-      childId: ['1234'],
+      child: ['1234'],
       date: '2022-02-03',
     };
-
-    jest
-      .spyOn(couchdb, 'getAll')
-      .mockResolvedValue([JSON.parse(JSON.stringify(aser))]);
-    jest.spyOn(couchdb, 'putAll').mockResolvedValue(undefined);
+    mockDb([aser]);
 
     await controller.migrateEntityIds();
 
-    expect(couchdb.getAll).toHaveBeenCalledWith('Aser');
     expect(couchdb.putAll).toHaveBeenCalledWith([
       {
         ...aser,
-        childId: ['Child:1234'],
+        child: ['Child:1234'],
       },
     ]);
   });
+
+  it('should not update entities that do not have references', async () => {
+    const noteWithReference = {
+      _id: 'Note:withRef',
+      subject: 'Linked note',
+      authors: ['Test'],
+      children: ['1', '2'],
+    };
+    const noteWithoutReference = {
+      _id: 'Note:withoutRef',
+      subject: 'Unlinked note',
+      date: '2023-12-12',
+    };
+    mockDb([noteWithoutReference, noteWithReference]);
+
+    await controller.migrateEntityIds();
+
+    expect(couchdb.putAll).toHaveBeenCalledWith([
+      {
+        ...noteWithReference,
+        authors: ['User:Test'],
+        children: ['Child:1', 'Child:2'],
+      },
+    ]);
+  });
+
+  it('should not update entities that only have full ids', async () => {
+    const onlyFullRefs = {
+      _id: 'ChildSchoolRelation:onlyFullRefs',
+      start: '2024-01-01',
+      end: '2024-12-31',
+      childId: 'Child:1',
+      schoolId: 'School:1',
+    };
+    const mixedRefs = {
+      _id: 'ChildSchoolRelation:mixedRefs',
+      start: '2025-01-01',
+      childId: '1',
+      schoolId: 'School:1',
+    };
+    mockDb([onlyFullRefs, mixedRefs]);
+
+    await controller.migrateEntityIds();
+
+    expect(couchdb.putAll).toHaveBeenCalledWith([
+      {
+        ...mixedRefs,
+        childId: 'Child:1',
+      },
+    ]);
+  });
+
+  it('should not update properties that only have full ids', async () => {
+    const todo = {
+      _id: 'Todo:mixed',
+      subject: 'Mixed IDs',
+      startDate: '2024-01-01',
+      relatedEntities: ['Child:1', 'School:2'],
+      assignedTo: ['demo'],
+    };
+    mockDb([todo]);
+
+    await controller.migrateEntityIds();
+
+    expect(couchdb.putAll).toHaveBeenCalledWith([
+      {
+        ...todo,
+        assignedTo: ['User:demo'],
+      },
+    ]);
+  });
+
+  it('should throw an error if a foreign ID was found', async () => {
+    const historicalEntity = {
+      _id: 'HistoricalEntityData:withForeignId',
+      date: '2022-04-11',
+      // Expects "Child" on default
+      relatedEntity: 'School:1',
+    };
+    mockDb([historicalEntity]);
+
+    return expect(controller.migrateEntityIds()).rejects.toBeTruthy();
+  });
+
+  it('should not update properties where multiple entity types are configured', async () => {
+    const onlyMixedProp = {
+      _id: 'EventNote:onlyMixedProp',
+      authors: ['User:Test'],
+      relatedEntities: ['ChildSchoolRelation:1', 'Child:2', 'School:3'],
+    };
+    const alsoOtherRefs = {
+      _id: 'EventNote:alsoOtherRefs',
+      authors: ['admin'],
+      schools: ['1', '3'],
+      relatedEntities: ['Child:4', 'School:3'],
+    };
+    mockDb([alsoOtherRefs, onlyMixedProp]);
+
+    await controller.migrateEntityIds();
+
+    expect(couchdb.putAll).toHaveBeenCalledWith([
+      {
+        ...alsoOtherRefs,
+        authors: ['User:admin'],
+        schools: ['School:1', 'School:3'],
+      },
+    ]);
+  });
+  it('should update the user ID in "created" and "updated"', async () => {});
+  it('should should references which are defined through custom config', async () => {});
+
+  function mockDb(docs: { _id: string }[]) {
+    jest
+      .spyOn(couchdb, 'getAll')
+      .mockImplementation((prefix) =>
+        Promise.resolve(
+          docs
+            .filter(({ _id }) => _id.startsWith(prefix))
+            .map((doc) => JSON.parse(JSON.stringify(doc))),
+        ),
+      );
+    jest.spyOn(couchdb, 'putAll').mockResolvedValue(undefined);
+  }
 });

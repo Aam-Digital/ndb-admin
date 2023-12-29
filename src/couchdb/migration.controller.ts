@@ -4,6 +4,7 @@ import * as credentials from '../assets/credentials.json';
 import { ConfigService } from '@nestjs/config';
 import * as sharp from 'sharp';
 import { ApiOperation } from '@nestjs/swagger';
+import { isEqual } from 'lodash';
 
 @Controller('migration')
 export class MigrationController {
@@ -61,7 +62,7 @@ export class MigrationController {
       for (const [prop, additional] of Object.entries(refs)) {
         if (typeof additional !== 'string') {
           // Multiple entity types should already have full ID
-          return entity;
+          continue;
         }
         if (res[prop]) {
           const val = res[prop];
@@ -74,7 +75,7 @@ export class MigrationController {
       }
       return res;
     });
-    return updated;
+    return updated.filter((entity, i) => !isEqual(entity, entities[i]));
   }
 
   private createPrefixedId(entity: string, id: string) {
