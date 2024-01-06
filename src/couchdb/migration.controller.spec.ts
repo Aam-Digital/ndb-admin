@@ -377,6 +377,56 @@ describe('MigrationController', () => {
     ]);
   });
 
+  it('should udpate the ID in a todo completion', async () => {
+    const activeTodo = {
+      subject: 'follow up',
+      deadline: '2024-01-09',
+      startDate: '2023-12-30',
+      description: 'Call to follow up on the recent developments.',
+      assignedTo: ['demo'],
+      relatedEntities: ['Child:59'],
+      _id: 'Todo:6tgXGLDBgps4vCX89zoo',
+      _rev: '1-85d5a5c52f638e900f1e3d5e91d2ac9e',
+      created: { at: '2024-01-06T18:49:22.624Z', by: 'User:demo' },
+      updated: { at: '2024-01-06T18:49:32.392Z', by: 'User:demo' },
+    };
+    const completedTodo = {
+      subject: 'call family',
+      deadline: '2024-01-24',
+      description: 'Check about the latest incident.',
+      assignedTo: ['demo'],
+      relatedEntities: ['Child:71'],
+      completed: {
+        completedBy: 'demo',
+        completedAt: '2024-01-06T18:49:56.766Z',
+      },
+      _id: 'Todo:X3X3dF0Xr4VpAKvjlSiF',
+      _rev: '1-439dfa8532c76c31d90200f5bf086def',
+      created: { at: '2024-01-06T18:49:22.624Z', by: 'User:demo' },
+      updated: { at: '2024-01-06T18:49:56.766Z', by: 'User:demo' },
+    };
+    mockDb([activeTodo, completedTodo]);
+
+    await controller.migrateEntityIds();
+
+    expect(couchdb.putAll).toHaveBeenCalledWith([
+      {
+        ...activeTodo,
+        assignedTo: ['User:demo'],
+        relatedEntities: ['Child:59'],
+      },
+      {
+        ...completedTodo,
+        assignedTo: ['User:demo'],
+        relatedEntities: ['Child:71'],
+        completed: {
+          completedBy: 'User:demo',
+          completedAt: '2024-01-06T18:49:56.766Z',
+        },
+      },
+    ]);
+  });
+
   it('should update references which are defined through custom config', async () => {
     const config = {
       _id: 'Config:CONFIG_ENTITY',

@@ -147,6 +147,19 @@ export class MigrationController {
           );
         }
       }
+
+      if (entityType === 'Todo') {
+        // migrate attendance
+        if (entity['completed']?.completedBy) {
+          res['completed'] = {
+            ...entity['completed'],
+            completedBy: this.createPrefixedId(
+              'User',
+              entity['completed'].completedBy,
+            ),
+          };
+        }
+      }
       return res;
     });
     // filter unmodified
