@@ -19,11 +19,11 @@ export class MigrationController {
   migrateEntityIds() {
     /**
      * - Collect built in entity references √
-     * - Update with customer config
-     * - fetch all entities and update ID if necessary
-     * - Also migrate createdBy and updatedBy
-     * - Also migrate attendance
-     * - Also migrate TodoCompletion
+     * - Update with customer config √
+     * - fetch all entities and update ID if necessary √
+     * - Also migrate createdBy and updatedBy √
+     * - Also migrate attendance √
+     * - Also migrate TodoCompletion √
      * - Migrate enum entity names in schema?
      */
     const defaultReferences = {
