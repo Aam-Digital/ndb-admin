@@ -17,8 +17,8 @@ export class CouchdbAdminController {
       'Update all documents that match `query` by patching (i.e. Object.assign) properties of the docs with the given `replace` object.',
   })
   @Post('bulk-update')
-  async updateDocuments(@Body() body: BulkUpdateDto) {
-    return await this.couchdbService.runForAllOrgs(
+  updateDocuments(@Body() body: BulkUpdateDto) {
+    return this.couchdbService.runForAllOrgs(
       credentials,
       async (couchdb: Couchdb) => {
         const res = await couchdb.post('/app/_find', {
@@ -45,11 +45,11 @@ export class CouchdbAdminController {
       '_id of the document in the database to be edited. By default the config entity is targeted.',
   })
   @Get('search-configs')
-  async findConfigs(
+  findConfigs(
     @Query('search') searchString: string,
     @Query('docId') docId?: string,
   ) {
-    return await this.couchdbService.runForAllOrgs(
+    return this.couchdbService.runForAllOrgs(
       credentials,
       async (couchdb: Couchdb) => {
         const file = '/app/' + (docId ?? 'Config:CONFIG_ENTITY');
@@ -76,12 +76,12 @@ export class CouchdbAdminController {
       '_id of the document in the database to be edited. By default the config entity is targeted.',
   })
   @Post('edit-configs')
-  async editConfigs(
+  editConfigs(
     @Query('search') searchString: string,
     @Query('replace') replaceString: string,
     @Query('docId') docId?: string,
   ) {
-    return await this.couchdbService.runForAllOrgs(
+    return this.couchdbService.runForAllOrgs(
       credentials,
       async (couchdb: Couchdb) => {
         const file = '/app/' + (docId ?? 'Config:CONFIG_ENTITY');
@@ -96,6 +96,32 @@ export class CouchdbAdminController {
           return 'edited';
         }
       },
+    );
+  }
+
+  @ApiOperation({
+    description: 'Get all documents with conflicts from each database.',
+  })
+  @Get('conflicts')
+  getConflicts() {
+    const viewDoc = {
+      _id: '_design/conflicts',
+      views: {
+        all: {
+          map:
+            '(doc) => { ' +
+            'if (doc._conflicts) { emit(doc._conflicts, doc._id); } ' +
+            '}',
+        },
+      },
+    };
+    const path = `/app/${viewDoc._id}`;
+    return this.couchdbService.runForAllOrgs(credentials, (couchdb: Couchdb) =>
+      couchdb
+        .get(path)
+        .catch(() => couchdb.put(path, viewDoc))
+        .then(() => couchdb.get(`${path}/_view/all`))
+        .then((res) => res.map(({ value }) => value)),
     );
   }
 
