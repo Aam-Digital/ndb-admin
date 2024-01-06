@@ -286,6 +286,97 @@ describe('MigrationController', () => {
     ]);
   });
 
+  it('should update the attendance object in notes and event notes', async () => {
+    const noteWithAttendance = {
+      children: ['4', '15', '16'],
+      childrenAttendance: [
+        ['4', { status: 'PRESENT', remarks: '' }],
+        ['15', { status: 'PRESENT', remarks: '' }],
+        ['16', { status: 'ABSENT', remarks: "got excused by it's mother" }],
+      ],
+      date: '2023-09-11',
+      subject: 'Guardians Meeting',
+      text: '\n        Our regular monthly meeting. Find the agenda and minutes in our meeting folder.\n      ',
+      authors: ['demo'],
+      category: 'GUARDIAN_MEETING',
+      relatedEntities: [],
+      schools: [],
+      warningLevel: 'OK',
+      _id: 'Note:791e6e3f-1158-4f9e-b0d2-2671a260fae2',
+      _rev: '1-5172da1aa03baa71bea8bb9f02d6c22d',
+      created: { at: '2024-01-06T18:27:07.109Z', by: 'User:demo' },
+      updated: { at: '2024-01-06T18:27:49.386Z', by: 'User:demo' },
+    };
+    const noteWithoutAttendance = {
+      children: ['64'],
+      childrenAttendance: [],
+      date: '2024-01-06',
+      subject: 'Special help for family',
+      text: '\n        Since the father has lost his job the family is struggling to survive.\n        After home visits and discussion in our team we decided to refer them to a special support programme.\n      ',
+      authors: ['Bhaumik'],
+      category: 'INCIDENT',
+      relatedEntities: [],
+      schools: [],
+      warningLevel: 'OK',
+      _id: 'Note:d53023c6-729b-48f5-8db5-9dfef031ffbc',
+      _rev: '1-3a7644a468bf0f6119e791180b0ecc53',
+      created: { at: '2024-01-06T18:27:07.109Z', by: 'User:demo' },
+      updated: { at: '2024-01-06T18:27:22.993Z', by: 'User:demo' },
+    };
+    const eventNote = {
+      children: ['70', '71'],
+      childrenAttendance: [
+        ['70', { status: 'PRESENT', remarks: '' }],
+        ['71', { status: 'PRESENT', remarks: '' }],
+      ],
+      date: '2024-01-06',
+      subject: 'Coaching Class 2Y',
+      authors: ['demo'],
+      category: 'COACHING_CLASS',
+      relatesTo: 'RecurringActivity:05d847fa-5d9b-49e0-bfd1-18ef611a6d6b',
+      relatedEntities: [],
+      schools: [],
+      _id: 'EventNote:b9715f7c-0299-49bb-b6ae-4beb69cb7306',
+      created: { at: '2024-01-06T18:25:06.935Z', by: 'User:demo' },
+      updated: { at: '2024-01-06T18:25:06.935Z', by: 'User:demo' },
+    };
+    mockDb([noteWithAttendance, noteWithoutAttendance, eventNote]);
+
+    await controller.migrateEntityIds();
+
+    expect(couchdb.putAll).toHaveBeenCalledWith([
+      {
+        ...noteWithAttendance,
+        children: ['Child:4', 'Child:15', 'Child:16'],
+        childrenAttendance: [
+          ['Child:4', { status: 'PRESENT', remarks: '' }],
+          ['Child:15', { status: 'PRESENT', remarks: '' }],
+          [
+            'Child:16',
+            { status: 'ABSENT', remarks: "got excused by it's mother" },
+          ],
+        ],
+        authors: ['User:demo'],
+      },
+      {
+        ...noteWithoutAttendance,
+        children: ['Child:64'],
+        authors: ['User:Bhaumik'],
+      },
+    ]);
+    expect(couchdb.putAll).toHaveBeenCalledWith([
+      {
+        ...eventNote,
+        children: ['Child:70', 'Child:71'],
+        childrenAttendance: [
+          ['Child:70', { status: 'PRESENT', remarks: '' }],
+          ['Child:71', { status: 'PRESENT', remarks: '' }],
+        ],
+        authors: ['User:demo'],
+      },
+    ]);
+  });
+
   it('should update references which are defined through custom config', async () => {
     const config = {
       _id: 'Config:CONFIG_ENTITY',
@@ -413,7 +504,7 @@ describe('MigrationController', () => {
       .mockImplementation((prefix) =>
         Promise.resolve(
           docs
-            .filter(({ _id }) => _id.startsWith(prefix))
+            .filter(({ _id }) => _id.startsWith(prefix + ':'))
             .map((doc) => JSON.parse(JSON.stringify(doc))),
         ),
       );

@@ -22,6 +22,9 @@ export class MigrationController {
      * - Update with customer config
      * - fetch all entities and update ID if necessary
      * - Also migrate createdBy and updatedBy
+     * - Also migrate attendance
+     * - Also migrate TodoCompletion
+     * - Migrate enum entity names in schema?
      */
     const defaultReferences = {
       Config: {},
@@ -58,7 +61,7 @@ export class MigrationController {
       const results = Object.entries(updatedReferences).map(
         async ([entity, references]) => {
           const entities = await couchdb.getAll(entity);
-          const updated = this.updateEntities(entities, references);
+          const updated = this.updateEntities(entities, references, entity);
           if (updated.length > 0) {
             return couchdb.putAll(updated);
           }
@@ -103,6 +106,7 @@ export class MigrationController {
   private updateEntities(
     entities: any[],
     refs: { [key: string]: string | string[] },
+    entityType: string,
   ): any[] {
     const updated = entities.map((entity) => {
       const res = { ...entity };
@@ -131,6 +135,18 @@ export class MigrationController {
           };
         }
       });
+
+      if (entityType === 'Note' || entityType === 'EventNote') {
+        // migrate attendance
+        if (entity['childrenAttendance']) {
+          res['childrenAttendance'] = entity['childrenAttendance'].map(
+            ([childId, attendance]) => [
+              this.createPrefixedId('Child', childId),
+              attendance,
+            ],
+          );
+        }
+      }
       return res;
     });
     // filter unmodified
