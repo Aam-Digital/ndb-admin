@@ -27,12 +27,19 @@ export class CouchdbAdminController {
           limit: 100000,
         });
 
-        return res.data.docs.map((doc) => {
-          const update = Object.assign(doc, body.replace);
-          return couchdb.put(doc._id, update);
-        });
+        return Promise.all(
+          res.data.docs.map((doc) => {
+            const update = Object.assign(doc, body.replace);
+            return couchdb.put(doc._id, update);
+          }),
+        );
       },
     );
+  }
+
+  @Post('multiple-bulk-update')
+  runAllUpdates(@Body() body: BulkUpdateDto[]) {
+    return Promise.all(body.map((update) => this.updateDocuments(update)));
   }
 
   @ApiOperation({
