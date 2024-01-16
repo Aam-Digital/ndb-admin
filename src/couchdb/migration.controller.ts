@@ -45,7 +45,7 @@ export class MigrationController {
         assignedTo: 'User',
       },
       EventNote: { children: 'Child', authors: 'User', schools: 'School' },
-      EducationalMaterial: {},
+      EducationalMaterial: { child: 'Child' },
       HistoricalEntityData: { relatedEntity: 'Child' },
       ProgressDashboardConfig: {},
       Todo: {

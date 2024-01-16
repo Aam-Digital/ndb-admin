@@ -377,7 +377,7 @@ describe('MigrationController', () => {
     ]);
   });
 
-  it('should udpate the ID in a todo completion', async () => {
+  it('should update the ID in a todo completion', async () => {
     const activeTodo = {
       subject: 'follow up',
       deadline: '2024-01-09',
@@ -413,12 +413,10 @@ describe('MigrationController', () => {
       {
         ...activeTodo,
         assignedTo: ['User:demo'],
-        relatedEntities: ['Child:59'],
       },
       {
         ...completedTodo,
         assignedTo: ['User:demo'],
-        relatedEntities: ['Child:71'],
         completed: {
           completedBy: 'User:demo',
           completedAt: '2024-01-06T18:49:56.766Z',
