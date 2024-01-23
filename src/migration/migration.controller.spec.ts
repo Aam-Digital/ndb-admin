@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { MigrationController } from './migration.controller';
-import { Couchdb, CouchdbService } from './couchdb.service';
+import { Couchdb, CouchdbService } from '../couchdb/couchdb.service';
 import { ConfigService } from '@nestjs/config';
+import { ConfigMigrationService } from './config-migration/config-migration.service';
 
 describe('MigrationController', () => {
   let controller: MigrationController;
@@ -22,6 +23,7 @@ describe('MigrationController', () => {
           },
         },
         ConfigService,
+        ConfigMigrationService,
       ],
     }).compile();
 

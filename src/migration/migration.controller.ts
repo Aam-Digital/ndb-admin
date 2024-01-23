@@ -1,9 +1,10 @@
 import { Controller, Post } from '@nestjs/common';
-import { Couchdb, CouchdbService } from './couchdb.service';
+import { Couchdb, CouchdbService } from '../couchdb/couchdb.service';
 import * as credentials from '../assets/credentials.json';
 import { ConfigService } from '@nestjs/config';
 import * as sharp from 'sharp';
 import { ApiOperation } from '@nestjs/swagger';
+import { ConfigMigrationService } from './config-migration/config-migration.service';
 
 @Controller('migration')
 export class MigrationController {
@@ -12,6 +13,7 @@ export class MigrationController {
   constructor(
     private couchdbService: CouchdbService,
     private configService: ConfigService,
+    private configMigrationService: ConfigMigrationService,
   ) {}
 
   @ApiOperation({
@@ -41,6 +43,7 @@ export class MigrationController {
       return couchdb.put(configPath, config);
     });
   }
+
   @ApiOperation({
     description:
       'Transform site-settings config from the central config doc into its own SiteSettings entity.',
@@ -90,6 +93,52 @@ export class MigrationController {
     await couchdb.put(attachmentsPath + `/logo?rev=${att.rev}`, resizedBlob);
     // return filename
     return logoPath.split('/').pop();
+  }
+
+  @ApiOperation({
+    description:
+      'Transform legacy "entity:" config format into the flattened structure containing id directly.',
+  })
+  @Post('entity-attributes-with-id')
+  async migrateEntityAttributesWithId() {
+    return this.couchdbService.runForAllOrgs(credentials, (couchdb: Couchdb) =>
+      this.configMigrationService.migrateEntityAttributesWithId(couchdb),
+    );
+  }
+
+  @ApiOperation({
+    description:
+      'Transform legacy "view:...Form" config format to have form field group headers with the fields rather than as separate array.',
+  })
+  @Post('form-field-groups')
+  async migrateFormHeadersIntoFieldGroups() {
+    return this.couchdbService.runForAllOrgs(credentials, (couchdb: Couchdb) =>
+      this.configMigrationService.migrateFormHeadersIntoFieldGroups(couchdb),
+    );
+  }
+
+  @ApiOperation({
+    description:
+      'migrate FormFieldConfig view/edit components to viewComponent/editComponent',
+  })
+  @Post('view-component-configs')
+  async migrateFormFieldConfigView2ViewComponent() {
+    return this.couchdbService.runForAllOrgs(credentials, (couchdb: Couchdb) =>
+      this.configMigrationService.migrateFormFieldConfigView2ViewComponent(
+        couchdb,
+      ),
+    );
+  }
+
+  @ApiOperation({
+    description:
+      'navigationMenu config with new menuItems format (label instead of name)',
+  })
+  @Post('menu-items')
+  async migrateMenuItemConfig() {
+    return this.couchdbService.runForAllOrgs(credentials, (couchdb: Couchdb) =>
+      this.configMigrationService.migrateMenuItemConfig(couchdb),
+    );
   }
 }
 
