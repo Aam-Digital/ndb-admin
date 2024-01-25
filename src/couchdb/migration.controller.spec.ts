@@ -225,6 +225,23 @@ describe('MigrationController', () => {
     ]);
   });
 
+  it('should update entities that do not fit the schema', async () => {
+    const notArray = {
+      _id: 'EventNote:notArray',
+      authors: 'Test',
+    };
+    mockDb([notArray]);
+
+    await controller.migrateEntityIds();
+
+    expect(couchdb.putAll).toHaveBeenCalledWith([
+      {
+        ...notArray,
+        authors: 'User:Test',
+      },
+    ]);
+  });
+
   it('should update the user ID in "created" and "updated"', async () => {
     const healthCheck = {
       _id: 'HealthCheck:1',
