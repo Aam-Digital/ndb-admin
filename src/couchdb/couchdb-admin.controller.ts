@@ -21,18 +21,31 @@ export class CouchdbAdminController {
     return this.couchdbService.runForAllOrgs(
       credentials,
       async (couchdb: Couchdb) => {
-        const res = await couchdb.post('/app/_find', {
+        const docs = await couchdb.post('/app/_find', {
           selector: body.query,
           skip: 0,
           limit: 100000,
         });
 
-        return res.data.docs.map((doc) => {
-          const update = Object.assign(doc, body.replace);
-          return couchdb.put(doc._id, update);
-        });
+        return Promise.all(
+          docs.map((doc) => {
+            const update = Object.assign(doc, body.replace);
+            return couchdb.put(`/app/${doc._id}`, update);
+          }),
+        );
       },
     );
+  }
+
+  @Post('multiple-bulk-update')
+  async runAllUpdates(@Body() body: BulkUpdateDto[]) {
+    const allResults = [];
+    // Running the updates one by one, to prevent too many simultaneous requests to the server
+    for (const update of body) {
+      const result = await this.updateDocuments(update);
+      allResults.push(result);
+    }
+    return allResults;
   }
 
   @ApiOperation({
