@@ -17,15 +17,6 @@ export class MigrationController {
 
   @Post('entity-ids')
   migrateEntityIds() {
-    /**
-     * - Collect built in entity references √
-     * - Update with customer config √
-     * - fetch all entities and update ID if necessary √
-     * - Also migrate createdBy and updatedBy √
-     * - Also migrate attendance √
-     * - Also migrate TodoCompletion √
-     * - Migrate enum entity names in schema?
-     */
     const defaultReferences = {
       Config: {},
       ConfigurableEnum: {},
@@ -189,7 +180,7 @@ export class MigrationController {
       const configPath = '/app/Config:CONFIG_ENTITY';
       const config = await couchdb.get(configPath);
       const res = Object.entries<any>(config.data).find(
-        ([_, val]) => val.component === 'Reporting',
+        ([, val]) => val.component === 'Reporting',
       );
       if (!res) {
         // No report config

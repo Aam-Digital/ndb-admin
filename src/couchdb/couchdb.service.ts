@@ -70,7 +70,7 @@ export class Couchdb {
     );
   }
 
-  getAll(prefix: string, db = 'app') {
+  getAll(prefix: string, db = 'app'): Promise<any[]> {
     const body = {
       include_docs: true,
       startkey: prefix + ':',
