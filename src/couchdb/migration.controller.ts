@@ -140,7 +140,7 @@ export class MigrationController {
       }
 
       if (entityType === 'Todo') {
-        // migrate attendance
+        // migrate completedBy
         if (entity['completed']?.completedBy) {
           res['completed'] = {
             ...entity['completed'],
