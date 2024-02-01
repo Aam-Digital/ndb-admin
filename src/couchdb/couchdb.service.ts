@@ -81,7 +81,7 @@ export class Couchdb {
     return firstValueFrom(
       this.http.post(`${this.baseUrl}/couchdb/${path}`, body, headers).pipe(
         catchError(() =>
-          this.http.put(`${this.baseUrl}/${path}`, body, headers),
+          this.http.post(`${this.baseUrl}/${path}`, body, headers),
         ),
         map(({ data }) => data?.rows.map(({ doc }) => doc)),
       ),
@@ -95,7 +95,7 @@ export class Couchdb {
     return firstValueFrom(
       this.http.post(`${this.baseUrl}/couchdb/${path}`, body, headers).pipe(
         catchError(() =>
-          this.http.put(`${this.baseUrl}/${path}`, body, headers),
+          this.http.post(`${this.baseUrl}/${path}`, body, headers),
         ),
         map(({ data }) => data),
       ),
