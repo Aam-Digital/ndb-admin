@@ -4,8 +4,9 @@ import { HttpModule } from '@nestjs/axios';
 import { ConfigModule } from '@nestjs/config';
 import { CouchdbService } from './couchdb/couchdb.service';
 import { KeycloakService } from './keycloak/keycloak.service';
-import { MigrationController } from './couchdb/migration.controller';
+import { MigrationController } from './migration/migration.controller';
 import { KeycloakMigrationController } from './keycloak/keycloak-migration.controller';
+import { ConfigMigrationService } from './migration/config-migration/config-migration.service';
 
 @Module({
   imports: [HttpModule, ConfigModule.forRoot({ isGlobal: true })],
@@ -14,6 +15,6 @@ import { KeycloakMigrationController } from './keycloak/keycloak-migration.contr
     MigrationController,
     KeycloakMigrationController,
   ],
-  providers: [CouchdbService, KeycloakService],
+  providers: [CouchdbService, KeycloakService, ConfigMigrationService],
 })
 export class AppModule {}

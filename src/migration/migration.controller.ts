@@ -1,10 +1,11 @@
 import { Controller, Post } from '@nestjs/common';
-import { Couchdb, CouchdbService } from './couchdb.service';
+import { Couchdb, CouchdbService } from '../couchdb/couchdb.service';
 import * as credentials from '../assets/credentials.json';
 import { ConfigService } from '@nestjs/config';
 import * as sharp from 'sharp';
 import { ApiOperation } from '@nestjs/swagger';
 import { isEqual } from 'lodash';
+import { ConfigMigrationService } from './config-migration/config-migration.service';
 
 @Controller('migration')
 export class MigrationController {
@@ -13,6 +14,7 @@ export class MigrationController {
   constructor(
     private couchdbService: CouchdbService,
     private configService: ConfigService,
+    private configMigrationService: ConfigMigrationService,
   ) {}
 
   @Post('entity-ids')
@@ -197,6 +199,7 @@ export class MigrationController {
       return couchdb.put(configPath, config);
     });
   }
+
   @ApiOperation({
     description:
       'Transform site-settings config from the central config doc into its own SiteSettings entity.',
@@ -246,6 +249,17 @@ export class MigrationController {
     await couchdb.put(attachmentsPath + `/logo?rev=${att.rev}`, resizedBlob);
     // return filename
     return logoPath.split('/').pop();
+  }
+
+  @ApiOperation({
+    description:
+      'Transform any legacy config formats to their latest formats. If already in new formats, this will have no effect.',
+  })
+  @Post('latest-config-formats')
+  async migrateToLatestConfigFormats() {
+    return this.couchdbService.runForAllOrgs(credentials, (couchdb: Couchdb) =>
+      this.configMigrationService.migrateToLatestConfigFormats(couchdb),
+    );
   }
 }
 
