@@ -30,16 +30,14 @@ export class CouchdbService {
     callback: (couchdb: Couchdb) => Promise<any>,
   ) {
     const results = {};
-    await Promise.all(
-      credentials.map((cred) =>
-        callback(this.getCouchdb(cred.name, cred.password))
-          .then((res) => (results[cred.name] = res))
-          .catch((err) => {
-            console.error('ERROR processing for: ' + cred.name, err);
-            results[cred.name] = 'ERROR see logs';
-          }),
-      ),
-    );
+    for (const cred of credentials) {
+      await callback(this.getCouchdb(cred.name, cred.password))
+        .then((res) => (results[cred.name] = res))
+        .catch((err) => {
+          console.error('ERROR processing for: ' + cred.name, err);
+          results[cred.name] = 'ERROR see logs';
+        });
+    }
     return results;
   }
 }
@@ -68,6 +66,38 @@ export class Couchdb {
       this.http.get(`${this.baseUrl}/couchdb${path}`, httpConfig).pipe(
         catchError(() => this.http.get(`${this.baseUrl}${path}`, httpConfig)),
         map((res) => res.data.rows ?? res.data),
+      ),
+    );
+  }
+
+  getAll(prefix: string, db = 'app'): Promise<any[]> {
+    const body = {
+      include_docs: true,
+      startkey: prefix + ':',
+      endkey: prefix + ':\ufff0',
+    };
+    const path = `${db}/_all_docs`;
+    const headers = { auth: this.auth };
+    return firstValueFrom(
+      this.http.post(`${this.baseUrl}/couchdb/${path}`, body, headers).pipe(
+        catchError(() =>
+          this.http.post(`${this.baseUrl}/${path}`, body, headers),
+        ),
+        map(({ data }) => data?.rows.map(({ doc }) => doc)),
+      ),
+    );
+  }
+
+  putAll(docs: any[], db = 'app') {
+    const body = { docs };
+    const headers = { auth: this.auth };
+    const path = `${db}/_bulk_docs`;
+    return firstValueFrom(
+      this.http.post(`${this.baseUrl}/couchdb/${path}`, body, headers).pipe(
+        catchError(() =>
+          this.http.post(`${this.baseUrl}/${path}`, body, headers),
+        ),
+        map(({ data }) => data),
       ),
     );
   }
