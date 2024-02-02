@@ -42,7 +42,7 @@ export class ConfigMigrationService {
     const config = await this.getConfigDoc(couchdb);
     const newConfig = this.applyMigrations(config);
     await this.saveConfigDoc(couchdb, newConfig);
-    return true;
+    return JSON.stringify(config) !== JSON.stringify(newConfig);
   }
 }
 
