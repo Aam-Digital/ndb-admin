@@ -97,47 +97,12 @@ export class MigrationController {
 
   @ApiOperation({
     description:
-      'Transform legacy "entity:" config format into the flattened structure containing id directly.',
+      'Transform any legacy config formats to their latest formats. If already in new formats, this will have no effect.',
   })
-  @Post('entity-attributes-with-id')
-  async migrateEntityAttributesWithId() {
+  @Post('latest-config-formats')
+  async migrateToLatestConfigFormats() {
     return this.couchdbService.runForAllOrgs(credentials, (couchdb: Couchdb) =>
-      this.configMigrationService.migrateEntityAttributesWithId(couchdb),
-    );
-  }
-
-  @ApiOperation({
-    description:
-      'Transform legacy "view:...Form" config format to have form field group headers with the fields rather than as separate array.',
-  })
-  @Post('form-field-groups')
-  async migrateFormHeadersIntoFieldGroups() {
-    return this.couchdbService.runForAllOrgs(credentials, (couchdb: Couchdb) =>
-      this.configMigrationService.migrateFormHeadersIntoFieldGroups(couchdb),
-    );
-  }
-
-  @ApiOperation({
-    description:
-      'migrate FormFieldConfig view/edit components to viewComponent/editComponent',
-  })
-  @Post('view-component-configs')
-  async migrateFormFieldConfigView2ViewComponent() {
-    return this.couchdbService.runForAllOrgs(credentials, (couchdb: Couchdb) =>
-      this.configMigrationService.migrateFormFieldConfigView2ViewComponent(
-        couchdb,
-      ),
-    );
-  }
-
-  @ApiOperation({
-    description:
-      'navigationMenu config with new menuItems format (label instead of name)',
-  })
-  @Post('menu-items')
-  async migrateMenuItemConfig() {
-    return this.couchdbService.runForAllOrgs(credentials, (couchdb: Couchdb) =>
-      this.configMigrationService.migrateMenuItemConfig(couchdb),
+      this.configMigrationService.migrateToLatestConfigFormats(couchdb),
     );
   }
 }

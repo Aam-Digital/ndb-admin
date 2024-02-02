@@ -15,51 +15,32 @@ export class ConfigMigrationService {
     return couchdb.put('/app/Config:CONFIG_ENTITY', configDoc);
   }
 
-  /**
-   * Use the given migrationFunction to transform any part of config document.
-   * This can act on any depth of the JSON document.
-   *
-   * @param config
-   * @param migrationFunction
-   * @private
-   */
-  private applyMigration(config, migrationFunction: ConfigMigration) {
-    return JSON.parse(JSON.stringify(config), (_that, rawValue) => {
+  private applyMigrations(config) {
+    const migrations: ConfigMigration[] = [
+      migrateEntityAttributesWithId,
+      migrateFormHeadersIntoFieldGroups,
+      migrateFormFieldConfigView2ViewComponent,
+      migrateMenuItemConfig,
+    ];
+
+    const newConfig = JSON.parse(JSON.stringify(config), (_that, rawValue) => {
       let configPart = rawValue;
-      configPart = migrationFunction(_that, configPart);
+      for (const migration of migrations) {
+        configPart = migration(_that, configPart);
+      }
       return configPart;
     });
+
+    return newConfig;
   }
 
-  async migrateEntityAttributesWithId(couchdb: Couchdb) {
+  /**
+   * apply all currently registered config format transformations, similar to the frontend, on-the-fly migrations.
+   * @param couchdb
+   */
+  async migrateToLatestConfigFormats(couchdb: Couchdb) {
     const config = await this.getConfigDoc(couchdb);
-
-    this.applyMigration(config, migrateEntityAttributesWithId);
-
-    await this.saveConfigDoc(couchdb, config);
-  }
-
-  async migrateFormHeadersIntoFieldGroups(couchdb: Couchdb) {
-    const config = await this.getConfigDoc(couchdb);
-
-    this.applyMigration(config, migrateFormHeadersIntoFieldGroups);
-
-    await this.saveConfigDoc(couchdb, config);
-  }
-
-  async migrateFormFieldConfigView2ViewComponent(couchdb: Couchdb) {
-    const config = await this.getConfigDoc(couchdb);
-
-    this.applyMigration(config, migrateFormFieldConfigView2ViewComponent);
-
-    await this.saveConfigDoc(couchdb, config);
-  }
-
-  async migrateMenuItemConfig(couchdb: Couchdb) {
-    const config = await this.getConfigDoc(couchdb);
-
-    this.applyMigration(config, migrateMenuItemConfig);
-
+    this.applyMigrations(config);
     await this.saveConfigDoc(couchdb, config);
   }
 }
