@@ -40,8 +40,9 @@ export class ConfigMigrationService {
    */
   async migrateToLatestConfigFormats(couchdb: Couchdb) {
     const config = await this.getConfigDoc(couchdb);
-    this.applyMigrations(config);
-    await this.saveConfigDoc(couchdb, config);
+    const newConfig = this.applyMigrations(config);
+    await this.saveConfigDoc(couchdb, newConfig);
+    return true;
   }
 }
 

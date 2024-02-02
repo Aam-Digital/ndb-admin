@@ -9,6 +9,7 @@ import { ConfigMigrationService } from './config-migration/config-migration.serv
 
 @Controller('migration')
 export class MigrationController {
+  /** the domain this API instance is administering, e.g. aam-digital.net */
   private domain = this.configService.get('DOMAIN');
 
   constructor(
