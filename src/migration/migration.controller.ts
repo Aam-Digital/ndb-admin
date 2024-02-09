@@ -73,7 +73,7 @@ export class MigrationController {
       JSON.stringify(defaultEntities),
     );
     const config: Config = await couchdb
-      .get('app/Config:CONFIG_ENTITY')
+      .get('/app/Config:CONFIG_ENTITY')
       .catch(() => ({ data: {} }));
     Object.entries(config.data)
       .filter(([key]) => key.startsWith('entity:'))
@@ -86,13 +86,13 @@ export class MigrationController {
             : {};
         }
         const entityObj = updatedEntities[entity];
-        entityConfig.attributes
+        Object.entries(entityConfig.attributes)
           .filter(
-            ({ schema }) =>
+            ([, schema]) =>
               schema.dataType === 'entity' ||
               schema.dataType === 'entity-array',
           )
-          .forEach(({ name, schema }) => (entityObj[name] = schema.additional));
+          .forEach(([name, schema]) => (entityObj[name] = schema.additional));
       });
     return updatedEntities;
   }
@@ -281,9 +281,8 @@ type Config = {
     [key: string]: {
       extends?: string;
       attributes: {
-        name: string;
-        schema: { dataType: string; additional: string | string[] };
-      }[];
+        [name: string]: { dataType: string; additional: string | string[] };
+      };
     };
   };
 };
