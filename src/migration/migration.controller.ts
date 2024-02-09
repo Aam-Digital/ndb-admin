@@ -86,7 +86,7 @@ export class MigrationController {
             : {};
         }
         const entityObj = updatedEntities[entity];
-        Object.entries(entityConfig.attributes)
+        Object.entries(entityConfig.attributes ?? {})
           .filter(
             ([, schema]) =>
               schema.dataType === 'entity' ||
