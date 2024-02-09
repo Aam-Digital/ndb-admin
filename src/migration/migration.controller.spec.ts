@@ -450,62 +450,47 @@ describe('MigrationController', () => {
       data: {
         // edited existing relation
         'entity:Note': {
-          attributes: [
-            {
-              name: 'children',
-              schema: {
-                dataType: 'entity-array',
-                additional: 'Child',
-                label: 'Mentees',
-                editComponent: 'EditAttendance',
-              },
+          attributes: {
+            children: {
+              dataType: 'entity-array',
+              additional: 'Child',
+              label: 'Mentees',
+              editComponent: 'EditAttendance',
             },
-            {
-              name: 'schools',
-              schema: {
-                dataType: 'entity-array',
-                additional: 'School',
-                label: 'Mentor:innen',
-              },
+            schools: {
+              dataType: 'entity-array',
+              additional: 'School',
+              label: 'Mentor:innen',
             },
-            {
-              name: 'relatedEntities',
-              schema: {
-                dataType: 'entity-array',
-                additional: 'ChildSchoolRelation',
-                label: 'Patenschaft/en',
-              },
+            relatedEntities: {
+              dataType: 'entity-array',
+              additional: 'ChildSchoolRelation',
+              label: 'Patenschaft/en',
             },
-          ],
+          },
         },
         // existing entity with new relations
         'entity:Child': {
-          attributes: [
-            {
-              name: 'fieldCoordinator',
-              schema: {
-                dataType: 'entity',
-                label: 'Name of the field coordinator filing the form',
-                additional: 'User',
-                defaultValue: '$current_user',
-              },
+          attributes: {
+            fieldCoordinator: {
+              dataType: 'entity',
+              label: 'Name of the field coordinator filing the form',
+              additional: 'User',
+              defaultValue: '$current_user',
             },
-          ],
+          },
         },
         // new entity with new relations
         'entity:MonthlyAttendance': {
           extends: 'HistoricalEntityData',
-          attributes: [
-            {
-              name: 'reporter',
-              schema: {
-                label: 'Taai',
-                dataType: 'entity',
-                additional: 'User',
-                defaultValue: '$current_user',
-              },
+          attributes: {
+            reporter: {
+              label: 'Taai',
+              dataType: 'entity',
+              additional: 'User',
+              defaultValue: '$current_user',
             },
-          ],
+          },
         },
       },
     };
