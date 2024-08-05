@@ -3,10 +3,11 @@
 # Run the following commands from the root folder to build, run and kill the application
 # >> docker build -f build/Dockerfile -t ndb-admin:latest .
 # >> docker run -p=80:80 ndb-admin:latest
-FROM node:16.13.0-alpine3.13 as builder
+FROM node:20-alpine as builder
 WORKDIR /app
 
-COPY package*.json ./
+COPY package.json package-lock.json ./
+
 RUN npm ci --no-progress
 
 COPY . .
@@ -21,12 +22,13 @@ RUN if [ "$RUN_TESTS" = true ] ; then \
     npm run lint &&\
     npm run test:cov ; fi
 
-FROM node:16.13.0-alpine3.13
+FROM node:20-alpine
 WORKDIR /app
 # Some packages enable optimization when this is set
 ENV NODE_ENV="production"
 
-COPY package*.json ./
+COPY package.json package-lock.json ./
+
 RUN npm ci --no-progress --only=production
 
 COPY --from=builder /app/dist ./dist
