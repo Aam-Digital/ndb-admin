@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Couchdb } from '../../couchdb/couchdb.service';
+import { migrateAddMissingEntityAttributes } from './migrate-add-entity-attributes';
 
 /**
  * Apply transformations to the Config document in the CouchDB,
@@ -21,6 +22,11 @@ export class ConfigMigrationService {
       migrateFormHeadersIntoFieldGroups,
       migrateFormFieldConfigView2ViewComponent,
       migrateMenuItemConfig,
+      migrateEntityDetailsInputEntityType,
+      migrateEntityArrayDatatype,
+      migrateEntitySchemaDefaultValue,
+      migrateChildrenListConfig,
+      migrateHistoricalDataComponent,
     ];
 
     const newConfig = JSON.parse(JSON.stringify(config), (_that, rawValue) => {
@@ -40,7 +46,10 @@ export class ConfigMigrationService {
    */
   async migrateToLatestConfigFormats(couchdb: Couchdb) {
     const config = await this.getConfigDoc(couchdb);
-    const newConfig = this.applyMigrations(config);
+    let newConfig = this.applyMigrations(config);
+
+    newConfig = migrateAddMissingEntityAttributes(newConfig);
+
     await this.saveConfigDoc(couchdb, newConfig);
     return JSON.stringify(config) !== JSON.stringify(newConfig);
   }
@@ -158,6 +167,128 @@ const migrateMenuItemConfig: ConfigMigration = (key, configPart) => {
       return item;
     }
   });
+
+  return configPart;
+};
+
+/**
+ * Config properties specifying an entityType should be named "entityType" rather than "entity"
+ * to avoid confusion with a specific instance of an entity being passed in components.
+ * @param key
+ * @param configPart
+ */
+const migrateEntityDetailsInputEntityType: ConfigMigration = (
+  key,
+  configPart,
+) => {
+  if (key !== 'config') {
+    return configPart;
+  }
+
+  if (configPart['entity']) {
+    configPart['entityType'] = configPart['entity'];
+    delete configPart['entity'];
+  }
+
+  return configPart;
+};
+
+/**
+ * Replace custom "entity-array" dataType with dataType="array", innerDatatype="entity"
+ * @param key
+ * @param configPart
+ */
+const migrateEntityArrayDatatype: ConfigMigration = (key, configPart) => {
+  if (configPart === 'DisplayEntityArray') {
+    return 'DisplayEntity';
+  }
+
+  if (!configPart?.hasOwnProperty('dataType')) {
+    return configPart;
+  }
+
+  const config = configPart;
+  if (config.dataType === 'entity-array') {
+    config.dataType = 'entity';
+    config.isArray = true;
+  }
+
+  if (config.dataType === 'array') {
+    config.dataType = config['innerDataType'];
+    delete config['innerDataType'];
+    config.isArray = true;
+  }
+
+  if (config.dataType === 'configurable-enum' && config['innerDataType']) {
+    config.additional = config['innerDataType'];
+    delete config['innerDataType'];
+  }
+
+  return configPart;
+};
+
+const migrateEntitySchemaDefaultValue: ConfigMigration = (
+  key: string,
+  configPart: any,
+): any => {
+  if (key !== 'defaultValue') {
+    return configPart;
+  }
+
+  if (typeof configPart == 'object') {
+    return configPart;
+  }
+
+  let placeholderValue: string | undefined = ['$now', '$current_user'].find(
+    (value) => value === configPart,
+  );
+
+  if (placeholderValue) {
+    return {
+      mode: 'dynamic',
+      value: placeholderValue,
+    };
+  }
+
+  return {
+    mode: 'static',
+    value: configPart,
+  };
+};
+
+const migrateChildrenListConfig: ConfigMigration = (key, configPart) => {
+  if (
+    typeof configPart !== 'object' ||
+    configPart?.['component'] !== 'ChildrenList'
+  ) {
+    return configPart;
+  }
+
+  configPart['component'] = 'EntityList';
+
+  configPart['config'] = configPart['config'] ?? {};
+  configPart['config']['entityType'] = 'Child';
+  configPart['config']['loaderMethod'] = 'ChildrenService';
+
+  return configPart;
+};
+
+const migrateHistoricalDataComponent: ConfigMigration = (key, configPart) => {
+  if (
+    typeof configPart !== 'object' ||
+    configPart?.['component'] !== 'HistoricalDataComponent'
+  ) {
+    return configPart;
+  }
+
+  configPart['component'] = 'RelatedEntities';
+
+  configPart['config'] = configPart['config'] ?? {};
+  if (Array.isArray(configPart['config'])) {
+    configPart['config'] = { columns: configPart['config'] };
+  }
+  configPart['config']['entityType'] = 'HistoricalEntityData';
+  configPart['config']['loaderMethod'] = 'HistoricalDataService';
 
   return configPart;
 };
