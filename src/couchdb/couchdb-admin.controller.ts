@@ -1,15 +1,17 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
-import { ApiOperation, ApiQuery } from '@nestjs/swagger';
+import {Body, Controller, Get, Post, Query} from '@nestjs/common';
+import {ApiOperation, ApiQuery} from '@nestjs/swagger';
 import * as credentials from '../assets/credentials.json';
-import { Couchdb, CouchdbService } from './couchdb.service';
-import { KeycloakService } from '../keycloak/keycloak.service';
-import { BulkUpdateDto } from './bulk-update.dto';
+import {Couchdb, CouchdbService} from './couchdb.service';
+import {KeycloakService} from '../keycloak/keycloak.service';
+import {BulkUpdateDto} from './bulk-update.dto';
+import {SearchAndReplaceService} from "./search-and-replace/search-and-replace.service";
 
 @Controller('couchdb-admin')
 export class CouchdbAdminController {
   constructor(
     private couchdbService: CouchdbService,
     private keycloakService: KeycloakService,
+    private searchAndReplaceService: SearchAndReplaceService,
   ) {}
 
   @ApiOperation({
@@ -20,20 +22,7 @@ export class CouchdbAdminController {
   updateDocuments(@Body() body: BulkUpdateDto) {
     return this.couchdbService.runForAllOrgs(
       credentials,
-      async (couchdb: Couchdb) => {
-        const docs = await couchdb.post('/app/_find', {
-          selector: body.query,
-          skip: 0,
-          limit: 100000,
-        });
-
-        return Promise.all(
-          docs.map((doc) => {
-            const update = Object.assign(doc, body.replace);
-            return couchdb.put(`/app/${doc._id}`, update);
-          }),
-        );
-      },
+      async (couchdb: Couchdb) => this.searchAndReplaceService.bulkUpdateAssign(couchdb, body),
     );
   }
 
@@ -49,128 +38,50 @@ export class CouchdbAdminController {
   }
 
   @ApiOperation({
-    description: 'Find all entities with given ID where "search" is included.',
+    description: 'Find all entities of given type or ID that have content matching the "search" regex.',
   })
   @ApiQuery({
-    name: 'docId',
-    required: false,
+    name: 'type',
     description:
-      '_id of the document in the database to be edited. By default the config entity is targeted.',
+        '_id or entity type prefix of the documents in the database to be considered for the search. (":" is added to prefixes automatically, if not part of the given id / prefix parameter)',
   })
   @Get('search-entities')
   findEntities(
     @Query('search') searchString: string,
-    @Query('docId') docId?: string,
+    @Query('type') type: string,
   ) {
     return this.couchdbService.runForAllOrgs(
       credentials,
-      async (couchdb: Couchdb) => {
-        const file = '/app/' + (docId ?? 'Config:CONFIG_ENTITY');
-        const doc = await couchdb.get(file);
-
-        const docString = JSON.stringify(doc);
-        const regex = new RegExp(searchString, 'g');
-
-        if (docString.match(regex)) {
-          return 'matching';
-        }
-      },
+      async (couchdb: Couchdb) => this.searchAndReplaceService.searchInEntities(couchdb, searchString, type),
     );
   }
 
   @ApiOperation({
     description:
-      'Replace the occurrences of "search" with "replace" in all entities with given ID.',
+      'Replace the occurrences of "search" with "replace" in all entities with given ID/type filter.',
   })
   @ApiQuery({
-    name: 'docId',
-    required: false,
+    name: 'search',
+    description: 'Regex to be searched for replacement in entities.'
+  })
+  @ApiQuery({
+    name: 'replace',
+    description: 'Text to be replaced for the "search" regex. This is internally using JavaScript .replace() and supports its special replacement patterns: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace'
+  })
+  @ApiQuery({
+    name: 'type',
     description:
-      '_id of the document in the database to be edited. By default the config entity is targeted.',
+        '_id or entity type prefix of the documents in the database to be considered for the search. (":" is added to prefixes automatically, if not part of the given id / prefix parameter)',
   })
   @Post('edit-entities')
   editEntities(
     @Query('search') searchString: string,
     @Query('replace') replaceString: string,
-    @Query('docId') docId?: string,
-  ) {
-    return this.couchdbService.runForAllOrgs(
-      credentials,
-      async (couchdb: Couchdb) => {
-        const file = '/app/' + (docId ?? 'Config:CONFIG_ENTITY');
-        const doc = await couchdb.get(file);
-
-        const docString = JSON.stringify(doc);
-        const regex = new RegExp(searchString, 'g');
-
-        if (docString.match(regex)) {
-          const replaced = docString.replace(regex, replaceString);
-          await couchdb.put(file, JSON.parse(replaced));
-          return 'edited';
-        }
-      },
-    );
-  }
-
-  @ApiOperation({
-    description: 'Find all entities of given type where "search" is included.',
-  })
-  @ApiQuery({
-    name: 'type',
-    description:
-      'EntityType of the document in the database to be edited. By default the config entity is targeted.',
-  })
-  @Get('search-type')
-  searchType(
-    @Query('search') searchString: string,
     @Query('type') type: string,
   ) {
     return this.couchdbService.runForAllOrgs(
       credentials,
-      async (couchdb: Couchdb) => {
-        const docs = await couchdb.getAll(type);
-        return docs
-          .filter((doc) => {
-            const docString = JSON.stringify(doc);
-            const regex = new RegExp(searchString, 'g');
-            return docString.match(regex);
-          })
-          .map(({ _id }) => _id);
-      },
-    );
-  }
-
-  @ApiOperation({
-    description:
-      'Replace the occurrences of "search" with "replace" in all entities of given type.',
-  })
-  @ApiQuery({
-    name: 'type',
-    description:
-      'EntityType of the document in the database to be edited. By default the config entity is targeted.',
-  })
-  @Post('edit-type')
-  editTYpe(
-    @Query('search') searchString: string,
-    @Query('replace') replaceString: string,
-    @Query('type') type: string,
-  ) {
-    return this.couchdbService.runForAllOrgs(
-      credentials,
-      async (couchdb: Couchdb) => {
-        const docs = await couchdb.getAll(type);
-        const regex = new RegExp(searchString, 'g');
-        return docs
-          .filter((doc) => {
-            const docString = JSON.stringify(doc);
-            return docString.match(regex);
-          })
-          .map((doc) => {
-            const docString = JSON.stringify(doc);
-            const replaced = docString.replace(regex, replaceString);
-            return couchdb.put(doc, JSON.parse(replaced));
-          });
-      },
+      async (couchdb: Couchdb) => this.searchAndReplaceService.replaceInEntities(couchdb, searchString, replaceString, type),
     );
   }
 
