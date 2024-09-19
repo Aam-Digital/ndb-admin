@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
-import { catchError, firstValueFrom, map } from 'rxjs';
-import { HttpService } from '@nestjs/axios';
-import { ConfigService } from '@nestjs/config';
+import {Injectable} from '@nestjs/common';
+import {catchError, firstValueFrom, map} from 'rxjs';
+import {HttpService} from '@nestjs/axios';
+import {ConfigService} from '@nestjs/config';
 
 /**
  * Service facilitating access to specific CouchDB databases.
@@ -71,10 +71,13 @@ export class Couchdb {
   }
 
   getAll(prefix: string, db = 'app'): Promise<any[]> {
+    if (!prefix.includes(':')) {
+        prefix += ':';
+    }
     const body = {
       include_docs: true,
-      startkey: prefix + ':',
-      endkey: prefix + ':\ufff0',
+      startkey: prefix,
+      endkey: prefix + '\ufff0',
     };
     const path = `${db}/_all_docs`;
     const headers = { auth: this.auth };
