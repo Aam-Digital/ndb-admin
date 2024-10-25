@@ -3,7 +3,7 @@ export function migrateAddMissingEntityAttributes(config) {
     // TODO: just blindly save all hard-coded fields into the entity config? or scan which ones are actually used?!
     if (
       !JSON.stringify(config).includes(`"${entityType}"`) &&
-      !["Note", "User"].includes(entityType)
+      !["Note", "User"].includes(entityType) // exception for these basic types - they should never be skipped
     ) {
       // don't add config if the entity is never explicitly used or referenced
       continue;
