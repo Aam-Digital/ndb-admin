@@ -1,10 +1,11 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
-import { ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { Couchdb, CouchdbService } from './couchdb.service';
 import { KeycloakService } from '../keycloak/keycloak.service';
 import { BulkUpdateDto } from './bulk-update.dto';
 import { SearchAndReplaceService } from './search-and-replace/search-and-replace.service';
 import { CredentialsService } from '../credentials/credentials.service';
+import { SystemStatistics } from './system-statistics';
 
 @Controller('couchdb-admin')
 export class CouchdbAdminController {
@@ -131,15 +132,13 @@ export class CouchdbAdminController {
   @ApiOperation({
     description: `Get statistics of how many children and users are registered.`,
   })
+  @ApiOkResponse({
+    description: `Array of statistics for each administered system.`,
+    isArray: true,
+    type: SystemStatistics,
+  })
   @Get('statistics')
-  async getStatistics(): Promise<
-    {
-      name: string;
-      childrenTotal: number;
-      childrenActive: number;
-      users: number;
-    }[]
-  > {
+  async getStatistics(): Promise<SystemStatistics[]> {
     const token = await this.keycloakService.getKeycloakToken();
     const allUsers =
       '/_users/_all_docs?startkey="org.couchdb.user:"&endkey="org.couchdb.user:\uffff"';
