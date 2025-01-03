@@ -1,22 +1,22 @@
-import {Injectable} from '@nestjs/common';
-import {catchError, firstValueFrom, map} from 'rxjs';
-import {HttpService} from '@nestjs/axios';
-import {ConfigService} from '@nestjs/config';
+import { Injectable } from '@nestjs/common';
+import { catchError, firstValueFrom, map } from 'rxjs';
+import { HttpService } from '@nestjs/axios';
+import { SystemCredentials } from '../credentials/credentials.service';
 
 /**
  * Service facilitating access to specific CouchDB databases.
  */
 @Injectable()
 export class CouchdbService {
-  private domain = this.configService.get('DOMAIN');
+  constructor(private http: HttpService) {}
 
-  constructor(
-    private http: HttpService,
-    private configService: ConfigService,
-  ) {}
-
-  getCouchdb(org: string, password: string) {
-    return new Couchdb(this.http, this.domain, org, password);
+  /**
+   * Get a Couchdb instance for a specific database.
+   * @param url The base URL / subdomain of the system (e.g. test.aam-digital.com)
+   * @param password
+   */
+  getCouchdb(url: string, password: string) {
+    return new Couchdb(this.http, url, password);
   }
 
   /**
@@ -26,16 +26,16 @@ export class CouchdbService {
    *                  return values are mapped into a key-value return object (key = credentials.name).
    */
   async runForAllOrgs(
-    credentials: { name: string; password: string }[],
+    credentials: SystemCredentials[],
     callback: (couchdb: Couchdb) => Promise<any>,
   ) {
     const results = {};
     for (const cred of credentials) {
-      await callback(this.getCouchdb(cred.name, cred.password))
-        .then((res) => (results[cred.name] = res))
+      await callback(this.getCouchdb(cred.url, cred.password))
+        .then((res) => (results[cred.url] = res))
         .catch((err) => {
-          console.error('ERROR processing for: ' + cred.name, err);
-          results[cred.name] = 'ERROR see logs';
+          console.error('ERROR processing for: ' + cred.url, err);
+          results[cred.url] = 'ERROR see logs';
         });
     }
     return results;
@@ -52,12 +52,11 @@ export class Couchdb {
 
   constructor(
     private http: HttpService,
-    private domain: string,
-    public org: string,
+    public url: string,
     private password: string,
   ) {
     this.auth = { username: 'admin', password: this.password };
-    this.baseUrl = `https://${this.org}.${this.domain}/db`;
+    this.baseUrl = `https://${this.url}/db`;
   }
 
   get(path: string) {
@@ -72,7 +71,7 @@ export class Couchdb {
 
   getAll(prefix: string, db = 'app'): Promise<any[]> {
     if (!prefix.includes(':')) {
-        prefix += ':';
+      prefix += ':';
     }
     const body = {
       include_docs: true,
