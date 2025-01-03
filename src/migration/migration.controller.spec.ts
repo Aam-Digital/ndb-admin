@@ -1,8 +1,9 @@
-import {Test, TestingModule} from '@nestjs/testing';
-import {MigrationController} from './migration.controller';
-import {Couchdb, CouchdbService} from '../couchdb/couchdb.service';
-import {ConfigService} from '@nestjs/config';
-import {ConfigMigrationService} from './config-migration/config-migration.service';
+import { Test, TestingModule } from '@nestjs/testing';
+import { MigrationController } from './migration.controller';
+import { Couchdb, CouchdbService } from '../couchdb/couchdb.service';
+import { ConfigService } from '@nestjs/config';
+import { ConfigMigrationService } from './config-migration/config-migration.service';
+import { CredentialsService } from '../credentials/credentials.service';
 
 describe('MigrationController', () => {
   let controller: MigrationController;
@@ -26,6 +27,7 @@ describe('MigrationController', () => {
         },
         ConfigService,
         ConfigMigrationService,
+        { provide: CredentialsService, useValue: { getCredentials: () => [] } },
       ],
     }).compile();
 
@@ -35,7 +37,6 @@ describe('MigrationController', () => {
   it('should be defined', () => {
     expect(controller).toBeDefined();
   });
-
 
   function mockDb(docs: { _id: string }[]) {
     jest

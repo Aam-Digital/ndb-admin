@@ -1,10 +1,10 @@
-import {Body, Controller, Get, Post, Query} from '@nestjs/common';
-import {ApiOperation, ApiQuery} from '@nestjs/swagger';
-import * as credentials from '../assets/credentials.json';
-import {Couchdb, CouchdbService} from './couchdb.service';
-import {KeycloakService} from '../keycloak/keycloak.service';
-import {BulkUpdateDto} from './bulk-update.dto';
-import {SearchAndReplaceService} from "./search-and-replace/search-and-replace.service";
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { Couchdb, CouchdbService } from './couchdb.service';
+import { KeycloakService } from '../keycloak/keycloak.service';
+import { BulkUpdateDto } from './bulk-update.dto';
+import { SearchAndReplaceService } from './search-and-replace/search-and-replace.service';
+import { CredentialsService } from '../credentials/credentials.service';
 
 @Controller('couchdb-admin')
 export class CouchdbAdminController {
@@ -12,6 +12,7 @@ export class CouchdbAdminController {
     private couchdbService: CouchdbService,
     private keycloakService: KeycloakService,
     private searchAndReplaceService: SearchAndReplaceService,
+    private credentialsService: CredentialsService,
   ) {}
 
   @ApiOperation({
@@ -21,8 +22,9 @@ export class CouchdbAdminController {
   @Post('bulk-update')
   updateDocuments(@Body() body: BulkUpdateDto) {
     return this.couchdbService.runForAllOrgs(
-      credentials,
-      async (couchdb: Couchdb) => this.searchAndReplaceService.bulkUpdateAssign(couchdb, body),
+      this.credentialsService.getCredentials(),
+      async (couchdb: Couchdb) =>
+        this.searchAndReplaceService.bulkUpdateAssign(couchdb, body),
     );
   }
 
@@ -38,12 +40,13 @@ export class CouchdbAdminController {
   }
 
   @ApiOperation({
-    description: 'Find all entities of given type or ID that have content matching the "search" regex.',
+    description:
+      'Find all entities of given type or ID that have content matching the "search" regex.',
   })
   @ApiQuery({
     name: 'type',
     description:
-        '_id or entity type prefix of the documents in the database to be considered for the search. (":" is added to prefixes automatically, if not part of the given id / prefix parameter)',
+      '_id or entity type prefix of the documents in the database to be considered for the search. (":" is added to prefixes automatically, if not part of the given id / prefix parameter)',
   })
   @Get('search-entities')
   findEntities(
@@ -51,8 +54,13 @@ export class CouchdbAdminController {
     @Query('type') type: string,
   ) {
     return this.couchdbService.runForAllOrgs(
-      credentials,
-      async (couchdb: Couchdb) => this.searchAndReplaceService.searchInEntities(couchdb, searchString, type),
+      this.credentialsService.getCredentials(),
+      async (couchdb: Couchdb) =>
+        this.searchAndReplaceService.searchInEntities(
+          couchdb,
+          searchString,
+          type,
+        ),
     );
   }
 
@@ -62,16 +70,17 @@ export class CouchdbAdminController {
   })
   @ApiQuery({
     name: 'search',
-    description: 'Regex to be searched for replacement in entities.'
+    description: 'Regex to be searched for replacement in entities.',
   })
   @ApiQuery({
     name: 'replace',
-    description: 'Text to be replaced for the "search" regex. This is internally using JavaScript .replace() and supports its special replacement patterns: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace'
+    description:
+      'Text to be replaced for the "search" regex. This is internally using JavaScript .replace() and supports its special replacement patterns: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace',
   })
   @ApiQuery({
     name: 'type',
     description:
-        '_id or entity type prefix of the documents in the database to be considered for the search. (":" is added to prefixes automatically, if not part of the given id / prefix parameter)',
+      '_id or entity type prefix of the documents in the database to be considered for the search. (":" is added to prefixes automatically, if not part of the given id / prefix parameter)',
   })
   @Post('edit-entities')
   editEntities(
@@ -80,8 +89,14 @@ export class CouchdbAdminController {
     @Query('type') type: string,
   ) {
     return this.couchdbService.runForAllOrgs(
-      credentials,
-      async (couchdb: Couchdb) => this.searchAndReplaceService.replaceInEntities(couchdb, searchString, replaceString, type),
+      this.credentialsService.getCredentials(),
+      async (couchdb: Couchdb) =>
+        this.searchAndReplaceService.replaceInEntities(
+          couchdb,
+          searchString,
+          replaceString,
+          type,
+        ),
     );
   }
 
@@ -102,12 +117,14 @@ export class CouchdbAdminController {
       },
     };
     const path = `/app/${viewDoc._id}`;
-    return this.couchdbService.runForAllOrgs(credentials, (couchdb: Couchdb) =>
-      couchdb
-        .get(path)
-        .catch(() => couchdb.put(path, viewDoc))
-        .then(() => couchdb.get(`${path}/_view/all`))
-        .then((res) => res.map(({ value }) => value)),
+    return this.couchdbService.runForAllOrgs(
+      this.credentialsService.getCredentials(),
+      (couchdb: Couchdb) =>
+        couchdb
+          .get(path)
+          .catch(() => couchdb.put(path, viewDoc))
+          .then(() => couchdb.get(`${path}/_view/all`))
+          .then((res) => res.map(({ value }) => value)),
     );
   }
 
@@ -131,10 +148,10 @@ export class CouchdbAdminController {
     const activeChildren = '/app/_find';
 
     const results = await this.couchdbService.runForAllOrgs(
-      credentials,
+      this.credentialsService.getCredentials(),
       async (couchdb: Couchdb) => {
         const users = await this.keycloakService
-          .getUsersFromKeycloak(couchdb.org, token)
+          .getUsersFromKeycloak(couchdb.url.split('.')[0], token)
           .catch(() => couchdb.get(allUsers));
         const children = await couchdb.get(allChildren);
         const active: any = await couchdb.post(
@@ -142,7 +159,7 @@ export class CouchdbAdminController {
           activeChildrenFilter,
         );
         return {
-          name: couchdb.org,
+          name: couchdb.url,
           users: users.length,
           childrenTotal: children.length,
           childrenActive: active.length,
