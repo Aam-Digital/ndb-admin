@@ -27,6 +27,8 @@
     "@nestjs/core": "^11.0.12",
     "@nestjs/platform-express": "^11.0.12",
     "@nestjs/swagger": "^11.1.0",
+    "@sentry/nestjs": "^9.10.1",
+    "@sentry/profiling-node": "^9.10.1",
     "axios": "^1.8.4",
     "lodash": "^4.17.21",
     "reflect-metadata": "^0.2.2",
