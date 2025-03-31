@@ -6,7 +6,8 @@ import { ConfigService } from '@nestjs/config';
 export class CredentialsService {
   readonly DEFAULT_DOMAIN: string = this.configService.get('DOMAIN');
 
-  constructor(private configService: ConfigService) {}
+  constructor(private configService: ConfigService) {
+  }
 
   getCredentials(): SystemCredentials[] {
     return credentials.map((c) => ({
@@ -18,7 +19,7 @@ export class CredentialsService {
 
 export interface SystemCredentials {
   /**
-   * System base URL
+   * System base URL (without protocol https)
    */
   url: string;
 
