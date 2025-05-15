@@ -14,14 +14,6 @@ COPY . .
 
 RUN npm run build
 
-# If set to true, tests are exectued
-ARG RUN_TESTS=false
-
-# Lint code and run tests
-RUN if [ "$RUN_TESTS" = true ] ; then \
-    npm run lint &&\
-    npm run test:cov ; fi
-
 FROM node:20-alpine
 WORKDIR /app
 # Some packages enable optimization when this is set
