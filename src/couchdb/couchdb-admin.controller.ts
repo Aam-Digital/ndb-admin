@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Res } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { Response } from 'express';
 import { Couchdb, CouchdbService } from './couchdb.service';
 import { KeycloakService } from '../keycloak/keycloak.service';
 import { BulkUpdateDto } from './bulk-update.dto';
@@ -137,8 +138,17 @@ export class CouchdbAdminController {
     isArray: true,
     type: SystemStatistics,
   })
+  @ApiQuery({
+    name: 'format',
+    description: 'Output format for the statistics. Use "csv" for CSV format or omit for JSON.',
+    required: false,
+    enum: ['csv'],
+  })
   @Get('statistics')
-  async getStatistics(): Promise<SystemStatistics[]> {
+  async getStatistics(
+    @Query('format') format?: string,
+    @Res() res?: Response,
+  ): Promise<SystemStatistics[] | void> {
     const token = await this.keycloakService.getKeycloakToken();
     const allUsers =
       '/_users/_all_docs?startkey="org.couchdb.user:"&endkey="org.couchdb.user:\uffff"';
@@ -166,7 +176,49 @@ export class CouchdbAdminController {
       },
     );
 
-    return Object.values(results);
+    const statisticsData: SystemStatistics[] = Object.values(results).filter(
+      (result): result is SystemStatistics => 
+        typeof result === 'object' && 
+        result !== null && 
+        'name' in result &&
+        'users' in result &&
+        'childrenTotal' in result &&
+        'childrenActive' in result
+    );
+
+    if (format === 'csv') {
+      const csvContent = this.convertToCSV(statisticsData);
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="statistics.csv"');
+      res.send(csvContent);
+      return;
+    }
+
+    return statisticsData;
+  }
+
+  private convertToCSV(data: SystemStatistics[]): string {
+    if (!data || data.length === 0) {
+      return '';
+    }
+
+    // Create CSV header
+    const headers = ['name', 'users', 'childrenTotal', 'childrenActive'];
+    const csvHeader = headers.join(',');
+
+    // Create CSV rows
+    const csvRows = data.map(item => {
+      return headers.map(header => {
+        const value = item[header];
+        // Escape values that contain commas, quotes, or newlines
+        if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
+          return `"${value.replace(/"/g, '""')}"`;
+        }
+        return value;
+      }).join(',');
+    });
+
+    return [csvHeader, ...csvRows].join('\n');
   }
 }
 
