@@ -168,8 +168,8 @@ export class CouchdbAdminController {
   })
   @Get('statistics')
   async getStatistics(
+    @Res() res: Response,
     @Query('format') format: string = 'json',
-    @Res() res?: Response,
   ): Promise<SystemStatistics[] | string | void> {
     if (format !== 'json' && format !== 'csv') {
       throw new BadRequestException('Invalid format. Use "json" or "csv".');

@@ -59,96 +59,35 @@ describe('CouchdbAdminController', () => {
       mockResponse = {
         setHeader: jest.fn(),
         send: jest.fn(),
+        json: jest.fn(),
       };
     });
 
     it('should return statistics in JSON format by default', async () => {
-      const result = await controller.getStatistics();
+      const result = await controller.getStatistics(mockResponse);
 
       expect(statisticsService.getStatistics).toHaveBeenCalled();
-      expect(result).toEqual(mockStatisticsData);
+      expect(mockResponse.json).toHaveBeenCalledWith(mockStatisticsData);
     });
 
     it('should return statistics in JSON format when format=json', async () => {
-      const result = await controller.getStatistics('json');
+      const result = await controller.getStatistics(mockResponse, 'json');
 
       expect(statisticsService.getStatistics).toHaveBeenCalled();
-      expect(result).toEqual(mockStatisticsData);
+      expect(mockResponse.json).toHaveBeenCalledWith(mockStatisticsData);
     });
 
     it('should return statistics in CSV format when format=csv', async () => {
-      await controller.getStatistics('csv', undefined, mockResponse);
+      await controller.getStatistics(mockResponse, 'csv');
 
       expect(statisticsService.getStatistics).toHaveBeenCalled();
       expect(mockResponse.setHeader).toHaveBeenCalledWith(
         'Content-Type',
-        'text/plain; charset=utf-8',
+        'text/csv',
       );
-      expect(mockResponse.send).toHaveBeenCalledWith(
-        expect.stringContaining('name,users,childrenTotal,childrenActive'),
-      );
-    });
-
-    it('should return CSV format when Accept header is text/csv', async () => {
-      const mockRequest = {
-        headers: { accept: 'text/csv' },
-      } as any;
-
-      await controller.getStatistics(undefined, mockRequest, mockResponse);
-
-      expect(statisticsService.getStatistics).toHaveBeenCalled();
       expect(mockResponse.setHeader).toHaveBeenCalledWith(
-        'Content-Type',
-        'text/plain; charset=utf-8',
-      );
-      expect(mockResponse.send).toHaveBeenCalledWith(
-        expect.stringContaining('name,users,childrenTotal,childrenActive'),
-      );
-    });
-
-    it('should return JSON format when Accept header is application/json', async () => {
-      const mockRequest = {
-        headers: { accept: 'application/json' },
-      } as any;
-
-      const result = await controller.getStatistics(
-        undefined,
-        mockRequest,
-        mockResponse,
-      );
-
-      expect(statisticsService.getStatistics).toHaveBeenCalled();
-      expect(result).toEqual(mockStatisticsData);
-      expect(mockResponse.setHeader).not.toHaveBeenCalled();
-    });
-
-    it('should prioritize query parameter over Accept header', async () => {
-      const mockRequest = {
-        headers: { accept: 'text/csv' },
-      } as any;
-
-      const result = await controller.getStatistics(
-        'json',
-        mockRequest,
-        mockResponse,
-      );
-
-      expect(statisticsService.getStatistics).toHaveBeenCalled();
-      expect(result).toEqual(mockStatisticsData);
-      expect(mockResponse.setHeader).not.toHaveBeenCalled();
-    });
-
-    it('should handle complex Accept header with multiple values', async () => {
-      const mockRequest = {
-        headers: { accept: 'text/html,application/xhtml+xml,text/csv,*/*' },
-      } as any;
-
-      await controller.getStatistics(undefined, mockRequest, mockResponse);
-
-      expect(statisticsService.getStatistics).toHaveBeenCalled();
-      expect(mockResponse.setHeader).toHaveBeenCalledWith(
-        'Content-Type',
-        'text/plain; charset=utf-8',
+        'Content-Disposition',
+        'inline; filename="statistics.csv"',
       );
       expect(mockResponse.send).toHaveBeenCalledWith(
         expect.stringContaining('name,users,childrenTotal,childrenActive'),
@@ -156,7 +95,7 @@ describe('CouchdbAdminController', () => {
     });
 
     it('should throw BadRequestException for invalid format', async () => {
-      await expect(controller.getStatistics('xml')).rejects.toThrow(
+      await expect(controller.getStatistics(undefined, 'xml')).rejects.toThrow(
         'Invalid format. Use "json" or "csv".',
       );
     });

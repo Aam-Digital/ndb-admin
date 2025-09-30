@@ -2,7 +2,8 @@
 
 ## Project Overview
 
-This is a NestJS-based admin utility service for managing multiple hosted Aam Digital instances. It provides REST API endpoints for bulk operations across CouchDB databases and Keycloak authentication systems.
+This is a NestJS-based admin utility service for managing multiple hosted Aam Digital instances. It provides REST API
+endpoints for bulk operations across CouchDB databases and Keycloak authentication systems.
 
 ## Technology Stack
 
@@ -78,7 +79,7 @@ describe('ServiceName', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ServiceName,
-        { provide: DependencyName, useValue: mockDependency },
+        {provide: DependencyName, useValue: mockDependency},
       ],
     }).compile();
 
@@ -156,7 +157,9 @@ describe('ServiceName', () => {
 ### Bulk Operations Across Instances
 
 ```typescript
-async bulkOperation() {
+async
+bulkOperation()
+{
   return this.couchdbService.runForAllOrgs(
     this.credentialsService.getCredentials(),
     async (couchdb: Couchdb) => {
@@ -186,3 +189,23 @@ await couchdb.putAll(updatedDocs);
 - Exposed port: 3000
 - Swagger UI available at `/api` endpoint
 - Can be deployed with path prefix `/admin` via reverse proxy
+
+-----
+
+# Specific Agent instructions
+
+When generating code, please adhere to the following specific instructions:
+
+- Also generate or adapt unit tests
+- If similar changes are required in multiple places, only implement in one place and ask for review before implementing
+  elsewhere
+- If a change is complex or large, first suggest and approach broken into smaller parts and ask for review after each
+  part
+- If unsure about a specific implementation detail, ask for clarification before proceeding
+- Do not change any code or tests that are unrelated to the direct task
+- Check the "Problems" tab in VSCode for TypeScript errors and any other issues after making changes before running
+  tests
+- Remove unused typescript imports
+- Check terminal output and fix unused Angular component imports or other warnings
+- When all changes are done, ask the user if the task should be finalized.
+  After confirmation, run tests (`npm run test`) and linting (`npm run lint`) and fix any issues.
