@@ -14,14 +14,12 @@ describe('CouchdbAdminController', () => {
     {
       name: 'test1.example.com',
       users: 10,
-      childrenTotal: 50,
-      childrenActive: 45,
+      entities: { Child: { all: 50, active: 45 }, User: { all: 5, active: 3 } },
     },
     {
       name: 'test2.example.com',
       users: 5,
-      childrenTotal: 30,
-      childrenActive: 28,
+      entities: { Child: { all: 30, active: 28 } },
     },
   ];
 
@@ -90,7 +88,9 @@ describe('CouchdbAdminController', () => {
         'inline; filename="statistics.csv"',
       );
       expect(mockResponse.send).toHaveBeenCalledWith(
-        expect.stringContaining('name,users,childrenTotal,childrenActive'),
+        expect.stringContaining(
+          'name,users,Child_all,Child_active,User_all,User_active',
+        ),
       );
     });
 
