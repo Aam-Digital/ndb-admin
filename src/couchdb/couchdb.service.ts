@@ -135,4 +135,8 @@ export class Couchdb {
         ),
     );
   }
+
+  find(query, db = 'app'): Promise<any[]> {
+    return this.post(`/${db}/_find`, query);
+  }
 }

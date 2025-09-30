@@ -14,28 +14,31 @@ export class StatisticsService {
 
   async getStatistics(): Promise<SystemStatistics[]> {
     const token = await this.keycloakService.getKeycloakToken();
-    const allUsers =
-      '/_users/_all_docs?startkey="org.couchdb.user:"&endkey="org.couchdb.user:\uffff"';
     const allChildren =
       '/app/_all_docs?startkey="Child:"&endkey="Child:\uffff"';
-    const activeChildren = '/app/_find';
 
     const results = await this.couchdbService.runForAllOrgs(
       this.credentialsService.getCredentials(),
       async (couchdb: Couchdb) => {
         const users = await this.keycloakService
           .getUsersFromKeycloak(couchdb.url.split('.')[0], token)
-          .catch(() => couchdb.get(allUsers));
-        const children = await couchdb.get(allChildren);
-        const active: any = await couchdb.post(
-          activeChildren,
-          activeChildrenFilter,
-        );
+          .catch(() => {
+            console.warn("Couldn't get users from Keycloak for", couchdb.url);
+            return [];
+          });
+
+        const children: any[] | undefined = await couchdb
+          .get(allChildren)
+          .catch(() => undefined);
+        const active: any[] | undefined = await couchdb
+          .find(activeChildrenFilter)
+          .catch(() => undefined);
+
         return {
           name: couchdb.url,
           users: users.length,
-          childrenTotal: children.length,
-          childrenActive: active.length,
+          childrenTotal: children ? children.length : -1,
+          childrenActive: active ? active.length : -1,
         };
       },
     );
