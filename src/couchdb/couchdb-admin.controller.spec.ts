@@ -64,14 +64,14 @@ describe('CouchdbAdminController', () => {
     });
 
     it('should return statistics in JSON format by default', async () => {
-      const result = await controller.getStatistics(mockResponse);
+      await controller.getStatistics(mockResponse);
 
       expect(statisticsService.getStatistics).toHaveBeenCalled();
       expect(mockResponse.json).toHaveBeenCalledWith(mockStatisticsData);
     });
 
     it('should return statistics in JSON format when format=json', async () => {
-      const result = await controller.getStatistics(mockResponse, 'json');
+      await controller.getStatistics(mockResponse, 'json');
 
       expect(statisticsService.getStatistics).toHaveBeenCalled();
       expect(mockResponse.json).toHaveBeenCalledWith(mockStatisticsData);

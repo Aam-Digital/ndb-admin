@@ -14,16 +14,15 @@ import { Couchdb, CouchdbService } from './couchdb.service';
 import { BulkUpdateDto } from './bulk-update.dto';
 import { SearchAndReplaceService } from './search-and-replace/search-and-replace.service';
 import { CredentialsService } from '../credentials/credentials.service';
-import { SystemStatistics } from './statistics/system-statistics';
 import { StatisticsService } from './statistics/statistics.service';
 
 @Controller('couchdb-admin')
 export class CouchdbAdminController {
   constructor(
-    private couchdbService: CouchdbService,
-    private searchAndReplaceService: SearchAndReplaceService,
-    private credentialsService: CredentialsService,
-    private statisticsService: StatisticsService,
+    private readonly couchdbService: CouchdbService,
+    private readonly searchAndReplaceService: SearchAndReplaceService,
+    private readonly credentialsService: CredentialsService,
+    private readonly statisticsService: StatisticsService,
   ) {}
 
   @ApiOperation({
@@ -170,7 +169,7 @@ export class CouchdbAdminController {
   async getStatistics(
     @Res() res: Response,
     @Query('format') format: string = 'json',
-  ): Promise<SystemStatistics[] | string | void> {
+  ): Promise<void> {
     if (format !== 'json' && format !== 'csv') {
       throw new BadRequestException('Invalid format. Use "json" or "csv".');
     }
@@ -181,10 +180,8 @@ export class CouchdbAdminController {
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', 'inline; filename="statistics.csv"');
       res.send(Papa.unparse(statisticsData));
-      return;
     } else {
       res.json(statisticsData);
-      return;
     }
   }
 }

@@ -7,9 +7,9 @@ import { SystemStatistics } from './system-statistics';
 @Injectable()
 export class StatisticsService {
   constructor(
-    private couchdbService: CouchdbService,
-    private keycloakService: KeycloakService,
-    private credentialsService: CredentialsService,
+    private readonly couchdbService: CouchdbService,
+    private readonly keycloakService: KeycloakService,
+    private readonly credentialsService: CredentialsService,
   ) {}
 
   async getStatistics(): Promise<SystemStatistics[]> {
