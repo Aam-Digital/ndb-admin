@@ -73,7 +73,7 @@ This is a NestJS-based admin utility service for managing multiple hosted Aam Di
 ```typescript
 describe('ServiceName', () => {
   let service: ServiceName;
-  
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -81,10 +81,10 @@ describe('ServiceName', () => {
         { provide: DependencyName, useValue: mockDependency },
       ],
     }).compile();
-    
+
     service = module.get<ServiceName>(ServiceName);
   });
-  
+
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
