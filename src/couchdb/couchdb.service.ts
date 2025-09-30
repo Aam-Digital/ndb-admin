@@ -25,10 +25,10 @@ export class CouchdbService {
    * @param callback A function that is called repeatedly, receiving the Couchdb instance for each database;
    *                  return values are mapped into a key-value return object (key = credentials.name).
    */
-  async runForAllOrgs(
+  async runForAllOrgs<R>(
     credentials: SystemCredentials[],
-    callback: (couchdb: Couchdb) => Promise<any>,
-  ) {
+    callback: (couchdb: Couchdb) => Promise<R>,
+  ): Promise<{ [key: string]: R }> {
     const results = {};
     for (const cred of credentials) {
       await callback(this.getCouchdb(cred.url, cred.password))
