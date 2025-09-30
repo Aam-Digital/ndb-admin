@@ -11,20 +11,27 @@ This is a NestJS-based admin utility service for managing multiple hosted Aam Di
 - **Testing**: Jest
 - **Linting**: ESLint with TypeScript
 - **Formatting**: Prettier
-- **Documentation**: Swagger/OpenAPI
+- **Documentation**: Swagger/OpenAPI (generated using NestJS annotations)
 - **Databases**: CouchDB (external)
 - **Authentication**: Keycloak (external)
 - **Monitoring**: Sentry
 
 ## Code Style and Conventions
 
-### TypeScript/NestJS
+### TypeScript
 
-- Use TypeScript strict mode conventions
+- Use strict type checking (already configured)
+- Prefer type inference when obvious
+- Avoid `any` type - use `unknown` when type is uncertain
+- Implement proper error handling with typed exceptions
+
+### NestJS
+
 - Follow NestJS module/controller/service architecture patterns
 - Use dependency injection via NestJS decorators (`@Injectable()`, `@Controller()`)
 - Controllers should be thin, delegate business logic to services
 - Use DTOs for request/response validation with class-validator decorators
+- Keep services small and focused on a single responsibility
 
 ### Naming Conventions
 
