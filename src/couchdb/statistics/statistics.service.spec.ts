@@ -20,7 +20,7 @@ describe('StatisticsService', () => {
     mockCouchdbInstance = {
       url: 'org1.example.com',
       get: jest.fn(),
-      post: jest.fn(),
+      put: jest.fn(),
     } as any;
 
     const mockCouchdb = {
@@ -56,13 +56,18 @@ describe('StatisticsService', () => {
     const realCouchdbService = new CouchdbService({} as HttpService);
     mockCouchdbService.runForAllOrgs =
       realCouchdbService.runForAllOrgs.bind(mockCouchdbService);
+
+    // Mock the createOrUpdateStatisticsView method to avoid the undefined error
+    jest
+      .spyOn(service as any, 'createOrUpdateStatisticsView')
+      .mockResolvedValue(undefined);
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
 
-  it('should get statistics from all organizations', async () => {
+  it('should get statistics from all organizations using CouchDB views', async () => {
     const mockToken = 'mock-token';
     const mockCredentials: SystemCredentials[] = [
       { url: 'org1.example.com', password: 'password1' },
@@ -70,23 +75,34 @@ describe('StatisticsService', () => {
     const mockUsers = Array(10)
       .fill({})
       .map((_, i) => ({ id: `user${i}` }));
-    const mockChildren = Array(50)
-      .fill({})
-      .map((_, i) => ({ id: `child${i}` }));
-    const mockActiveChildren = Array(45)
-      .fill({})
-      .map((_, i) => ({ id: `active${i}` }));
+
+    // Mock CouchDB view responses
+    const mockStatsAll = [
+      { key: 'Child', value: 50 },
+      { key: 'User', value: 10 },
+      { key: 'School', value: 5 },
+    ];
+
+    const mockStatsActive = [
+      { key: 'Child', value: 45 },
+      { key: 'User', value: 8 },
+      { key: 'School', value: 5 },
+    ];
 
     mockKeycloakService.getKeycloakToken.mockResolvedValue(mockToken);
     mockCredentialsService.getCredentials.mockReturnValue(mockCredentials);
     mockKeycloakService.getUsersFromKeycloak.mockResolvedValue(
       mockUsers as any,
     );
-    mockCouchdbInstance.get.mockResolvedValue(mockChildren);
-    mockCouchdbInstance.post.mockResolvedValue(mockActiveChildren);
+
+    // Mock the CouchDB get calls for the statistics views
+    mockCouchdbInstance.get
+      .mockResolvedValueOnce(mockStatsAll) // entities_all view
+      .mockResolvedValueOnce(mockStatsActive); // entities_active view
 
     const result = await service.getStatistics();
 
+    // Verify the sequence of operations
     expect(mockKeycloakService.getKeycloakToken).toHaveBeenCalled();
     expect(mockCredentialsService.getCredentials).toHaveBeenCalled();
     expect(mockCouchdbService.getCouchdb).toHaveBeenCalledWith(
@@ -97,47 +113,56 @@ describe('StatisticsService', () => {
       'org1',
       mockToken,
     );
+
+    // Verify view queries
     expect(mockCouchdbInstance.get).toHaveBeenCalledWith(
-      '/app/_all_docs?startkey="Child:"&endkey="Child:\uffff"',
+      '_design/statistics/_view/entities_all?group=true',
+      'app',
     );
-    expect(mockCouchdbInstance.post).toHaveBeenCalledWith(
-      '/app/_find',
-      expect.any(Object),
+    expect(mockCouchdbInstance.get).toHaveBeenCalledWith(
+      '_design/statistics/_view/entities_active?group=true',
+      'app',
     );
+
+    // Verify result structure
     expect(result).toEqual([
       {
         name: 'org1.example.com',
         users: 10,
-        childrenTotal: 50,
-        childrenActive: 45,
+        entities: {
+          Child: { all: 50, active: 45 },
+          User: { all: 10, active: 8 },
+          School: { all: 5, active: 5 },
+        },
       },
     ]);
   });
 
-  it('should handle keycloak failure and fallback to couchdb users', async () => {
+  it('should handle keycloak failure and fallback to empty users array', async () => {
     const mockToken = 'mock-token';
     const mockCredentials: SystemCredentials[] = [
       { url: 'org1.example.com', password: 'password1' },
     ];
-    const mockUsersFromCouchdb = Array(8)
-      .fill({})
-      .map((_, i) => ({ id: `couchuser${i}` }));
-    const mockChildren = Array(30)
-      .fill({})
-      .map((_, i) => ({ id: `child${i}` }));
-    const mockActiveChildren = Array(25)
-      .fill({})
-      .map((_, i) => ({ id: `active${i}` }));
+
+    const mockStatsAll = [
+      { key: 'Child', value: 30 },
+      { key: 'User', value: 5 },
+    ];
+
+    const mockStatsActive = [
+      { key: 'Child', value: 25 },
+      { key: 'User', value: 3 },
+    ];
 
     mockKeycloakService.getKeycloakToken.mockResolvedValue(mockToken);
     mockCredentialsService.getCredentials.mockReturnValue(mockCredentials);
     mockKeycloakService.getUsersFromKeycloak.mockRejectedValue(
       new Error('Keycloak error'),
     );
+
     mockCouchdbInstance.get
-      .mockResolvedValueOnce(mockUsersFromCouchdb) // First call for users fallback
-      .mockResolvedValueOnce(mockChildren); // Second call for children
-    mockCouchdbInstance.post.mockResolvedValue(mockActiveChildren);
+      .mockResolvedValueOnce(mockStatsAll)
+      .mockResolvedValueOnce(mockStatsActive);
 
     const result = await service.getStatistics();
 
@@ -145,15 +170,88 @@ describe('StatisticsService', () => {
       'org1',
       mockToken,
     );
-    expect(mockCouchdbInstance.get).toHaveBeenCalledWith(
-      '/_users/_all_docs?startkey="org.couchdb.user:"&endkey="org.couchdb.user:\uffff"',
-    );
+
+    // When Keycloak fails, should use empty users array (length 0)
     expect(result).toEqual([
       {
         name: 'org1.example.com',
-        users: 8,
-        childrenTotal: 30,
-        childrenActive: 25,
+        users: 0,
+        entities: {
+          Child: { all: 30, active: 25 },
+          User: { all: 5, active: 3 },
+        },
+      },
+    ]);
+  });
+
+  it('should handle CouchDB view failures gracefully', async () => {
+    const mockToken = 'mock-token';
+    const mockCredentials: SystemCredentials[] = [
+      { url: 'org1.example.com', password: 'password1' },
+    ];
+    const mockUsers = Array(5)
+      .fill({})
+      .map((_, i) => ({ id: `user${i}` }));
+
+    mockKeycloakService.getKeycloakToken.mockResolvedValue(mockToken);
+    mockCredentialsService.getCredentials.mockReturnValue(mockCredentials);
+    mockKeycloakService.getUsersFromKeycloak.mockResolvedValue(
+      mockUsers as any,
+    );
+
+    // Mock CouchDB view failures
+    mockCouchdbInstance.get
+      .mockRejectedValueOnce(new Error('View error')) // entities_all view fails
+      .mockRejectedValueOnce(new Error('View error')); // entities_active view fails
+
+    const result = await service.getStatistics();
+
+    expect(result).toEqual([
+      {
+        name: 'org1.example.com',
+        users: 5,
+        entities: {}, // Empty entities when both views fail
+      },
+    ]);
+  });
+
+  it('should handle partial view data correctly', async () => {
+    const mockToken = 'mock-token';
+    const mockCredentials: SystemCredentials[] = [
+      { url: 'org1.example.com', password: 'password1' },
+    ];
+    const mockUsers = Array(3)
+      .fill({})
+      .map((_, i) => ({ id: `user${i}` }));
+
+    // Mock data where active has entities not in all (edge case)
+    const mockStatsAll = [{ key: 'Child', value: 20 }];
+
+    const mockStatsActive = [
+      { key: 'Child', value: 18 },
+      { key: 'Note', value: 5 }, // Note exists in active but not in all
+    ];
+
+    mockKeycloakService.getKeycloakToken.mockResolvedValue(mockToken);
+    mockCredentialsService.getCredentials.mockReturnValue(mockCredentials);
+    mockKeycloakService.getUsersFromKeycloak.mockResolvedValue(
+      mockUsers as any,
+    );
+
+    mockCouchdbInstance.get
+      .mockResolvedValueOnce(mockStatsAll)
+      .mockResolvedValueOnce(mockStatsActive);
+
+    const result = await service.getStatistics();
+
+    expect(result).toEqual([
+      {
+        name: 'org1.example.com',
+        users: 3,
+        entities: {
+          Child: { all: 20, active: 18 },
+          Note: { all: 0, active: 5 }, // Handles entity in active but not in all
+        },
       },
     ]);
   });

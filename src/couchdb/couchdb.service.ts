@@ -59,7 +59,14 @@ export class Couchdb {
     this.baseUrl = `https://${this.url}/db`;
   }
 
-  get(path: string) {
+  get<R = any>(path: string, db?: string): Promise<R> {
+    if (!path.startsWith('/')) {
+      path = '/' + path;
+    }
+    if (db) {
+      path = `/${db}${path}`;
+    }
+
     const httpConfig = { auth: this.auth };
     return firstValueFrom(
       this.http.get(`${this.baseUrl}/couchdb${path}`, httpConfig).pipe(
@@ -104,7 +111,14 @@ export class Couchdb {
     );
   }
 
-  put(path: string, data, headers?: any): Promise<any> {
+  put(path: string, data, db?: string, headers?: any): Promise<any> {
+    if (!path.startsWith('/')) {
+      path = '/' + path;
+    }
+    if (db) {
+      path = `/${db}${path}`;
+    }
+
     return firstValueFrom(
       this.http
         .put(`${this.baseUrl}/couchdb${path}`, data, {
@@ -121,6 +135,10 @@ export class Couchdb {
   }
 
   post(path: string, data, headers?: any): Promise<any> {
+    if (!path.startsWith('/')) {
+      path = '/' + path;
+    }
+
     return firstValueFrom(
       this.http
         .post(`${this.baseUrl}/couchdb${path}`, data, {

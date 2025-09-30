@@ -200,7 +200,7 @@ When generating code, please adhere to the following specific instructions:
 - If similar changes are required in multiple places, only implement in one place and ask for review before implementing
   elsewhere
 - If a change is complex or large, first suggest and approach broken into smaller parts and ask for review after each
-  part
+  part. Ask for confirmation after each part before proceeding with changes in Agent mode.
 - If unsure about a specific implementation detail, ask for clarification before proceeding
 - Do not change any code or tests that are unrelated to the direct task
 - Check the "Problems" tab in VSCode for TypeScript errors and any other issues after making changes before running
