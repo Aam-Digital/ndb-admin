@@ -5,9 +5,11 @@ import {
   Get,
   Post,
   Query,
+  Res,
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import * as Papa from 'papaparse';
+import { Response } from 'express';
 import { Couchdb, CouchdbService } from './couchdb.service';
 import { BulkUpdateDto } from './bulk-update.dto';
 import { SearchAndReplaceService } from './search-and-replace/search-and-replace.service';
@@ -142,8 +144,20 @@ export class CouchdbAdminController {
   })
   @ApiOkResponse({
     description: `Array of statistics for each administered system.`,
-    isArray: true,
-    type: SystemStatistics,
+    content: {
+      'application/json': {
+        schema: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/SystemStatistics' },
+        },
+      },
+      'text/csv': {
+        schema: {
+          type: 'string',
+          example: 'organization,totalUsers\nOrg1,25\nOrg2,30',
+        },
+      },
+    },
   })
   @ApiQuery({
     name: 'format',
@@ -154,7 +168,8 @@ export class CouchdbAdminController {
   })
   @Get('statistics')
   async getStatistics(
-    @Query('format') format?: string,
+    @Query('format') format: string = 'json',
+    @Res() res?: Response,
   ): Promise<SystemStatistics[] | string | void> {
     if (format !== 'json' && format !== 'csv') {
       throw new BadRequestException('Invalid format. Use "json" or "csv".');
@@ -163,10 +178,13 @@ export class CouchdbAdminController {
     const statisticsData = await this.statisticsService.getStatistics();
 
     if (format === 'csv') {
-      const csvContent = Papa.unparse(statisticsData);
-      return csvContent;
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'inline; filename="statistics.csv"');
+      res.send(Papa.unparse(statisticsData));
+      return;
     } else {
-      return statisticsData;
+      res.json(statisticsData);
+      return;
     }
   }
 }
