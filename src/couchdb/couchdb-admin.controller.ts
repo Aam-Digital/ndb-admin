@@ -179,7 +179,24 @@ export class CouchdbAdminController {
     if (format === 'csv') {
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', 'inline; filename="statistics.csv"');
-      res.send(Papa.unparse(statisticsData));
+
+      // replace statistics.entities (`{ Child: { all: 30, active: 25 }, User: { all: 5, active: 3 } }`)
+      // and add flattened properties for each entity type and status to the statistics object
+      // (e.g. `Child_all: 30, Child_active: 25, User_all: 5, User_active: 3`)
+      const flattenedData = statisticsData.map((stat) => {
+        const flattenedEntities = {};
+        for (const [entityType, counts] of Object.entries(stat.entities)) {
+          flattenedEntities[`${entityType}_all`] = counts.all;
+          flattenedEntities[`${entityType}_active`] = counts.active;
+        }
+        return {
+          name: stat.name,
+          users: stat.users,
+          ...flattenedEntities,
+        };
+      });
+
+      res.send(Papa.unparse(flattenedData));
     } else {
       res.json(statisticsData);
     }
