@@ -1,20 +1,27 @@
-import { Body, Controller, Get, Post, Query, Res } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiQuery } from '@nestjs/swagger';
-import { Response } from 'express';
+import * as Papa from 'papaparse';
 import { Couchdb, CouchdbService } from './couchdb.service';
-import { KeycloakService } from '../keycloak/keycloak.service';
 import { BulkUpdateDto } from './bulk-update.dto';
 import { SearchAndReplaceService } from './search-and-replace/search-and-replace.service';
 import { CredentialsService } from '../credentials/credentials.service';
-import { SystemStatistics } from './system-statistics';
+import { SystemStatistics } from './statistics/system-statistics';
+import { StatisticsService } from './statistics/statistics.service';
 
 @Controller('couchdb-admin')
 export class CouchdbAdminController {
   constructor(
     private couchdbService: CouchdbService,
-    private keycloakService: KeycloakService,
     private searchAndReplaceService: SearchAndReplaceService,
     private credentialsService: CredentialsService,
+    private statisticsService: StatisticsService,
   ) {}
 
   @ApiOperation({
@@ -140,134 +147,26 @@ export class CouchdbAdminController {
   })
   @ApiQuery({
     name: 'format',
-    description: 'Output format for the statistics. Use "csv" for CSV format or omit for JSON.',
+    description:
+      'Output format for the statistics. Use "csv" for CSV format or omit for JSON. Can also be specified via Accept header.',
     required: false,
-    enum: ['csv'],
+    enum: ['csv', 'json'],
   })
   @Get('statistics')
   async getStatistics(
     @Query('format') format?: string,
-    @Res() res?: Response,
-  ): Promise<SystemStatistics[] | void> {
-    const token = await this.keycloakService.getKeycloakToken();
-    const allUsers =
-      '/_users/_all_docs?startkey="org.couchdb.user:"&endkey="org.couchdb.user:\uffff"';
-    const allChildren =
-      '/app/_all_docs?startkey="Child:"&endkey="Child:\uffff"';
-    const activeChildren = '/app/_find';
+  ): Promise<SystemStatistics[] | string | void> {
+    if (format !== 'json' && format !== 'csv') {
+      throw new BadRequestException('Invalid format. Use "json" or "csv".');
+    }
 
-    const results = await this.couchdbService.runForAllOrgs(
-      this.credentialsService.getCredentials(),
-      async (couchdb: Couchdb) => {
-        const users = await this.keycloakService
-          .getUsersFromKeycloak(couchdb.url.split('.')[0], token)
-          .catch(() => couchdb.get(allUsers));
-        const children = await couchdb.get(allChildren);
-        const active: any = await couchdb.post(
-          activeChildren,
-          activeChildrenFilter,
-        );
-        return {
-          name: couchdb.url,
-          users: users.length,
-          childrenTotal: children.length,
-          childrenActive: active.length,
-        };
-      },
-    );
-
-    const statisticsData: SystemStatistics[] = Object.values(results).filter(
-      (result): result is SystemStatistics => 
-        typeof result === 'object' && 
-        result !== null && 
-        'name' in result &&
-        'users' in result &&
-        'childrenTotal' in result &&
-        'childrenActive' in result
-    );
+    const statisticsData = await this.statisticsService.getStatistics();
 
     if (format === 'csv') {
-      const csvContent = this.convertToCSV(statisticsData);
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', 'attachment; filename="statistics.csv"');
-      res.send(csvContent);
-      return;
+      const csvContent = Papa.unparse(statisticsData);
+      return csvContent;
+    } else {
+      return statisticsData;
     }
-
-    return statisticsData;
-  }
-
-  private convertToCSV(data: SystemStatistics[]): string {
-    if (!data || data.length === 0) {
-      return '';
-    }
-
-    // Create CSV header
-    const headers = ['name', 'users', 'childrenTotal', 'childrenActive'];
-    const csvHeader = headers.join(',');
-
-    // Create CSV rows
-    const csvRows = data.map(item => {
-      return headers.map(header => {
-        const value = item[header];
-        // Escape values that contain commas, quotes, or newlines
-        if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
-          return `"${value.replace(/"/g, '""')}"`;
-        }
-        return value;
-      }).join(',');
-    });
-
-    return [csvHeader, ...csvRows].join('\n');
   }
 }
-
-const activeChildrenFilter = {
-  selector: {
-    _id: {
-      $gt: 'Child:',
-      $lt: 'Child:\uffff',
-    },
-    status: {
-      $or: [
-        {
-          $not: {
-            $eq: 'Dropout',
-          },
-        },
-        {
-          $exists: false,
-        },
-      ],
-    },
-    dropoutDate: {
-      $exists: false,
-    },
-    exit_date: {
-      $exists: false,
-    },
-    active: {
-      $or: [
-        {
-          $exists: false,
-        },
-        {
-          $eq: true,
-        },
-      ],
-    },
-    inactive: {
-      $or: [
-        {
-          $exists: false,
-        },
-        {
-          $eq: false,
-        },
-      ],
-    },
-  },
-  execution_stats: true,
-  limit: 100000,
-  skip: 0,
-};

@@ -1,16 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CouchdbAdminController } from './couchdb-admin.controller';
-import { KeycloakService } from '../keycloak/keycloak.service';
 import { CouchdbService } from './couchdb.service';
 import { SearchAndReplaceService } from './search-and-replace/search-and-replace.service';
 import { CredentialsService } from '../credentials/credentials.service';
-import { SystemStatistics } from './system-statistics';
-import { Response } from 'express';
+import { StatisticsService } from './statistics/statistics.service';
+import { SystemStatistics } from './statistics/system-statistics';
 
 describe('CouchdbAdminController', () => {
   let controller: CouchdbAdminController;
-  let couchdbService: CouchdbService;
-  let keycloakService: KeycloakService;
+  let statisticsService: StatisticsService;
 
   const mockStatisticsData: SystemStatistics[] = [
     {
@@ -28,31 +26,26 @@ describe('CouchdbAdminController', () => {
   ];
 
   beforeEach(async () => {
-    const mockKeycloakService = {
-      getKeycloakToken: jest.fn().mockResolvedValue('mock-token'),
-      getUsersFromKeycloak: jest.fn().mockResolvedValue([]),
+    const mockStatisticsService = {
+      getStatistics: jest.fn().mockResolvedValue(mockStatisticsData),
     };
 
     const mockCouchdbService = {
-      runForAllOrgs: jest.fn().mockResolvedValue({
-        'test1.example.com': mockStatisticsData[0],
-        'test2.example.com': mockStatisticsData[1],
-      }),
+      runForAllOrgs: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CouchdbAdminController],
       providers: [
-        { provide: KeycloakService, useValue: mockKeycloakService },
+        { provide: StatisticsService, useValue: mockStatisticsService },
         { provide: CouchdbService, useValue: mockCouchdbService },
-        { provide: SearchAndReplaceService, useValue: undefined },
+        { provide: SearchAndReplaceService, useValue: {} },
         { provide: CredentialsService, useValue: { getCredentials: () => [] } },
       ],
     }).compile();
 
-    controller = module.get(CouchdbAdminController);
-    couchdbService = module.get(CouchdbService);
-    keycloakService = module.get(KeycloakService);
+    controller = module.get<CouchdbAdminController>(CouchdbAdminController);
+    statisticsService = module.get<StatisticsService>(StatisticsService);
   });
 
   it('should be defined', () => {
@@ -60,102 +53,112 @@ describe('CouchdbAdminController', () => {
   });
 
   describe('getStatistics', () => {
-    it('should return JSON format by default', async () => {
-      const result = await controller.getStatistics();
-      expect(result).toEqual(mockStatisticsData);
-    });
+    let mockResponse: any;
 
-    it('should return JSON format when format is not csv', async () => {
-      const result = await controller.getStatistics('json');
-      expect(result).toEqual(mockStatisticsData);
-    });
-
-    it('should return CSV format when format is csv', async () => {
-      const mockResponse = {
+    beforeEach(() => {
+      mockResponse = {
         setHeader: jest.fn(),
         send: jest.fn(),
-      } as unknown as Response;
-
-      await controller.getStatistics('csv', mockResponse);
-
-      expect(mockResponse.setHeader).toHaveBeenCalledWith('Content-Type', 'text/csv');
-      expect(mockResponse.setHeader).toHaveBeenCalledWith('Content-Disposition', 'attachment; filename="statistics.csv"');
-      
-      const expectedCsv = 'name,users,childrenTotal,childrenActive\n' +
-                          'test1.example.com,10,50,45\n' +
-                          'test2.example.com,5,30,28';
-      expect(mockResponse.send).toHaveBeenCalledWith(expectedCsv);
-    });
-  });
-
-  describe('convertToCSV', () => {
-    it('should convert statistics array to CSV format', () => {
-      const csvResult = (controller as any).convertToCSV(mockStatisticsData);
-      
-      const expectedCsv = 'name,users,childrenTotal,childrenActive\n' +
-                          'test1.example.com,10,50,45\n' +
-                          'test2.example.com,5,30,28';
-      
-      expect(csvResult).toBe(expectedCsv);
+      };
     });
 
-    it('should return empty string for empty array', () => {
-      const csvResult = (controller as any).convertToCSV([]);
-      expect(csvResult).toBe('');
+    it('should return statistics in JSON format by default', async () => {
+      const result = await controller.getStatistics();
+
+      expect(statisticsService.getStatistics).toHaveBeenCalled();
+      expect(result).toEqual(mockStatisticsData);
     });
 
-    it('should handle values with commas by escaping them', () => {
-      const dataWithCommas: SystemStatistics[] = [
-        {
-          name: 'test,server.com',
-          users: 10,
-          childrenTotal: 50,
-          childrenActive: 45,
-        },
-      ];
+    it('should return statistics in JSON format when format=json', async () => {
+      const result = await controller.getStatistics('json');
 
-      const csvResult = (controller as any).convertToCSV(dataWithCommas);
-      
-      const expectedCsv = 'name,users,childrenTotal,childrenActive\n' +
-                          '"test,server.com",10,50,45';
-      
-      expect(csvResult).toBe(expectedCsv);
+      expect(statisticsService.getStatistics).toHaveBeenCalled();
+      expect(result).toEqual(mockStatisticsData);
     });
 
-    it('should handle values with quotes by escaping them', () => {
-      const dataWithQuotes: SystemStatistics[] = [
-        {
-          name: 'test"server.com',
-          users: 10,
-          childrenTotal: 50,
-          childrenActive: 45,
-        },
-      ];
+    it('should return statistics in CSV format when format=csv', async () => {
+      await controller.getStatistics('csv', undefined, mockResponse);
 
-      const csvResult = (controller as any).convertToCSV(dataWithQuotes);
-      
-      const expectedCsv = 'name,users,childrenTotal,childrenActive\n' +
-                          '"test""server.com",10,50,45';
-      
-      expect(csvResult).toBe(expectedCsv);
+      expect(statisticsService.getStatistics).toHaveBeenCalled();
+      expect(mockResponse.setHeader).toHaveBeenCalledWith(
+        'Content-Type',
+        'text/plain; charset=utf-8',
+      );
+      expect(mockResponse.send).toHaveBeenCalledWith(
+        expect.stringContaining('name,users,childrenTotal,childrenActive'),
+      );
     });
 
-    it('should handle values with newlines by escaping them', () => {
-      const dataWithNewlines: SystemStatistics[] = [
-        {
-          name: 'test\nserver.com',
-          users: 10,
-          childrenTotal: 50,
-          childrenActive: 45,
-        },
-      ];
+    it('should return CSV format when Accept header is text/csv', async () => {
+      const mockRequest = {
+        headers: { accept: 'text/csv' },
+      } as any;
 
-      const csvResult = (controller as any).convertToCSV(dataWithNewlines);
-      
-      const expectedCsv = 'name,users,childrenTotal,childrenActive\n' +
-                          '"test\nserver.com",10,50,45';
-      
-      expect(csvResult).toBe(expectedCsv);
+      await controller.getStatistics(undefined, mockRequest, mockResponse);
+
+      expect(statisticsService.getStatistics).toHaveBeenCalled();
+      expect(mockResponse.setHeader).toHaveBeenCalledWith(
+        'Content-Type',
+        'text/plain; charset=utf-8',
+      );
+      expect(mockResponse.send).toHaveBeenCalledWith(
+        expect.stringContaining('name,users,childrenTotal,childrenActive'),
+      );
+    });
+
+    it('should return JSON format when Accept header is application/json', async () => {
+      const mockRequest = {
+        headers: { accept: 'application/json' },
+      } as any;
+
+      const result = await controller.getStatistics(
+        undefined,
+        mockRequest,
+        mockResponse,
+      );
+
+      expect(statisticsService.getStatistics).toHaveBeenCalled();
+      expect(result).toEqual(mockStatisticsData);
+      expect(mockResponse.setHeader).not.toHaveBeenCalled();
+    });
+
+    it('should prioritize query parameter over Accept header', async () => {
+      const mockRequest = {
+        headers: { accept: 'text/csv' },
+      } as any;
+
+      const result = await controller.getStatistics(
+        'json',
+        mockRequest,
+        mockResponse,
+      );
+
+      expect(statisticsService.getStatistics).toHaveBeenCalled();
+      expect(result).toEqual(mockStatisticsData);
+      expect(mockResponse.setHeader).not.toHaveBeenCalled();
+    });
+
+    it('should handle complex Accept header with multiple values', async () => {
+      const mockRequest = {
+        headers: { accept: 'text/html,application/xhtml+xml,text/csv,*/*' },
+      } as any;
+
+      await controller.getStatistics(undefined, mockRequest, mockResponse);
+
+      expect(statisticsService.getStatistics).toHaveBeenCalled();
+      expect(mockResponse.setHeader).toHaveBeenCalledWith(
+        'Content-Type',
+        'text/plain; charset=utf-8',
+      );
+      expect(mockResponse.send).toHaveBeenCalledWith(
+        expect.stringContaining('name,users,childrenTotal,childrenActive'),
+      );
+    });
+
+    it('should throw BadRequestException for invalid format', async () => {
+      await expect(controller.getStatistics('xml')).rejects.toThrow(
+        'Invalid format. Use "json" or "csv".',
+      );
     });
   });
 });
