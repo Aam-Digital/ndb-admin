@@ -61,7 +61,7 @@ export class Couchdb {
     private password: string,
     private username: string = 'admin',
   ) {
-    this.auth = { username: username, password: this.password };
+    this.auth = { username: this.username, password: this.password };
     this.baseUrl = `https://${this.url}/db`;
   }
 
