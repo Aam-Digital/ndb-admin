@@ -6,8 +6,7 @@ import { ConfigService } from '@nestjs/config';
 export class CredentialsService {
   readonly DEFAULT_DOMAIN: string = this.configService.get('DOMAIN');
 
-  constructor(private configService: ConfigService) {
-  }
+  constructor(private configService: ConfigService) {}
 
   getCredentials(): SystemCredentials[] {
     return credentials.map((c) => ({
@@ -27,4 +26,9 @@ export interface SystemCredentials {
    * admin password to CouchDB
    */
   password: string;
+
+  /**
+   * (optional) overwrite the default admin username for CouchDB
+   */
+  username?: string;
 }

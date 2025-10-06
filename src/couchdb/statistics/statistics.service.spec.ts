@@ -70,7 +70,7 @@ describe('StatisticsService', () => {
   it('should get statistics from all organizations using CouchDB views', async () => {
     const mockToken = 'mock-token';
     const mockCredentials: SystemCredentials[] = [
-      { url: 'org1.example.com', password: 'password1' },
+      { url: 'org1.example.com', password: 'password1', username: 'aam-admin' },
     ];
     const mockUsers = Array(10)
       .fill({})
@@ -108,6 +108,7 @@ describe('StatisticsService', () => {
     expect(mockCouchdbService.getCouchdb).toHaveBeenCalledWith(
       'org1.example.com',
       'password1',
+      'aam-admin',
     );
     expect(mockKeycloakService.getUsersFromKeycloak).toHaveBeenCalledWith(
       'org1',

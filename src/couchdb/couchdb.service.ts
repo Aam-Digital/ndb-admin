@@ -14,9 +14,14 @@ export class CouchdbService {
    * Get a Couchdb instance for a specific database.
    * @param url The base URL / subdomain of the system (e.g. test.aam-digital.com)
    * @param password
+   * @param username (Optional) username to access the database; defaults to 'admin'
    */
-  getCouchdb(url: string, password: string) {
-    return new Couchdb(this.http, url, password);
+  getCouchdb(url: string, password: string, username?: string): Couchdb {
+    if (!username) {
+      username = 'admin';
+    }
+
+    return new Couchdb(this.http, url, password, username);
   }
 
   /**
@@ -31,7 +36,7 @@ export class CouchdbService {
   ): Promise<{ [key: string]: R }> {
     const results = {};
     for (const cred of credentials) {
-      await callback(this.getCouchdb(cred.url, cred.password))
+      await callback(this.getCouchdb(cred.url, cred.password, cred.username))
         .then((res) => (results[cred.url] = res))
         .catch((err) => {
           console.error('ERROR processing for: ' + cred.url, err);
@@ -54,8 +59,9 @@ export class Couchdb {
     private http: HttpService,
     public url: string,
     private password: string,
+    private username: string = 'admin',
   ) {
-    this.auth = { username: 'admin', password: this.password };
+    this.auth = { username: username, password: this.password };
     this.baseUrl = `https://${this.url}/db`;
   }
 
