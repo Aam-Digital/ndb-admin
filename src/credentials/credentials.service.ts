@@ -12,6 +12,7 @@ export class CredentialsService {
     return credentials.map((c) => ({
       url: c.url ?? c['name'] + '.' + this.DEFAULT_DOMAIN,
       password: c.password,
+      username: c.username,
     }));
   }
 }
