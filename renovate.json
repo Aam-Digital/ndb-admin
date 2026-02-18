@@ -3,7 +3,7 @@
   "extends": ["config:recommended", "group:allNonMajor"],
   "enabledManagers": ["npm"],
   "timezone": "Etc/UTC",
-  "schedule": ["after 00:00 and before 04:00 on the first day of the month"],
+  "schedule": ["* 0-3 1 * *"]
   "dependencyDashboard": true,
   "prConcurrentLimit": 5,
   "prHourlyLimit": 2,
