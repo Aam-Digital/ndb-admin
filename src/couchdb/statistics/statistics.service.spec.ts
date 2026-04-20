@@ -1,12 +1,12 @@
+import { HttpService } from '@nestjs/axios';
 import { Test, TestingModule } from '@nestjs/testing';
-import { StatisticsService } from './statistics.service';
-import { Couchdb, CouchdbService } from '../couchdb.service';
-import { KeycloakService } from '../../keycloak/keycloak.service';
 import {
   CredentialsService,
   SystemCredentials,
 } from '../../credentials/credentials.service';
-import { HttpService } from '@nestjs/axios';
+import { KeycloakService } from '../../keycloak/keycloak.service';
+import { Couchdb, CouchdbService } from '../couchdb.service';
+import { StatisticsService } from './statistics.service';
 
 describe('StatisticsService', () => {
   let service: StatisticsService;
@@ -255,5 +255,47 @@ describe('StatisticsService', () => {
         },
       },
     ]);
+  });
+
+  it('should process organizations sorted by category with missing and empty in the same group', async () => {
+    const mockToken = 'mock-token';
+    const mockCredentials: SystemCredentials[] = [
+      { url: 'zeta.example.com', password: 'password1', category: 'zeta' },
+      { url: 'beta.example.com', password: 'password2', category: 'beta' },
+      { url: 'aaa.example.com', password: 'password3' },
+      { url: 'zzz.example.com', password: 'password4', category: '' },
+    ];
+
+    mockKeycloakService.getKeycloakToken.mockResolvedValue(mockToken);
+    mockCredentialsService.getCredentials.mockReturnValue(mockCredentials);
+    mockKeycloakService.getUsersFromKeycloak.mockResolvedValue([] as any);
+    mockCouchdbInstance.get.mockResolvedValue([] as any);
+
+    await service.getStatistics();
+
+    expect(mockCouchdbService.getCouchdb).toHaveBeenNthCalledWith(
+      1,
+      'aaa.example.com',
+      'password3',
+      undefined,
+    );
+    expect(mockCouchdbService.getCouchdb).toHaveBeenNthCalledWith(
+      2,
+      'zzz.example.com',
+      'password4',
+      undefined,
+    );
+    expect(mockCouchdbService.getCouchdb).toHaveBeenNthCalledWith(
+      3,
+      'beta.example.com',
+      'password2',
+      undefined,
+    );
+    expect(mockCouchdbService.getCouchdb).toHaveBeenNthCalledWith(
+      4,
+      'zeta.example.com',
+      'password1',
+      undefined,
+    );
   });
 });
