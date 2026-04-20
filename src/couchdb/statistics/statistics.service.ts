@@ -14,9 +14,12 @@ export class StatisticsService {
 
   async getStatistics(): Promise<SystemStatistics[]> {
     const token = await this.keycloakService.getKeycloakToken();
+    const credentials = this.credentialsService
+      .getCredentials()
+      .sort(compareSystemCredentialsByCategory);
 
     const results = await this.couchdbService.runForAllOrgs(
-      this.credentialsService.getCredentials(),
+      credentials,
       async (couchdb: Couchdb) => {
         const users = await this.keycloakService
           .getUsersFromKeycloak(couchdb.url.split('.')[0], token)
@@ -102,7 +105,7 @@ export class StatisticsService {
 
       await couchdb.put(STATISTICS_DESIGN_DOC_ID, updatedDoc, 'app');
     } catch (error) {
-      if (error.status === 404) {
+      if ((error as { status?: number }).status === 404) {
         // Document doesn't exist, create new one
         await couchdb.put(STATISTICS_DESIGN_DOC_ID, statisticsDesignDoc, 'app');
       } else {
@@ -113,3 +116,21 @@ export class StatisticsService {
 }
 
 const STATISTICS_DESIGN_DOC_ID = '_design/statistics';
+
+function compareSystemCredentialsByCategory(
+  a: { category?: string; url: string },
+  b: { category?: string; url: string },
+): number {
+  const categoryA = normalizeCategory(a.category);
+  const categoryB = normalizeCategory(b.category);
+
+  if (categoryA !== categoryB) {
+    return categoryA.localeCompare(categoryB);
+  }
+
+  return a.url.localeCompare(b.url);
+}
+
+function normalizeCategory(category?: string): string {
+  return category?.trim() ?? '';
+}
