@@ -183,9 +183,17 @@ export class CouchdbAdminController {
       // replace statistics.entities (`{ Child: { all: 30, active: 25 }, User: { all: 5, active: 3 } }`)
       // and add flattened properties for each entity type and status to the statistics object
       // (e.g. `Child_all: 30, Child_active: 25, User_all: 5, User_active: 3`)
+      // Collect all unique entity types across all orgs first,
+      // so that every row has the same keys (Papa.unparse uses first row's keys to determine columns)
+      const allEntityTypes = new Set<string>();
+      statisticsData.forEach((stat) => {
+        Object.keys(stat.entities).forEach((type) => allEntityTypes.add(type));
+      });
+
       const flattenedData = statisticsData.map((stat) => {
-        const flattenedEntities = {};
-        for (const [entityType, counts] of Object.entries(stat.entities)) {
+        const flattenedEntities: Record<string, number> = {};
+        for (const entityType of allEntityTypes) {
+          const counts = stat.entities[entityType] ?? { all: 0, active: 0 };
           flattenedEntities[`${entityType}_all`] = counts.all;
           flattenedEntities[`${entityType}_active`] = counts.active;
         }

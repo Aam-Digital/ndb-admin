@@ -19,7 +19,7 @@ describe('CouchdbAdminController', () => {
     {
       name: 'test2.example.com',
       users: 5,
-      entities: { Child: { all: 30, active: 28 } },
+      entities: { Child: { all: 30, active: 28 }, School: { all: 2, active: 2 } },
     },
   ];
 
@@ -89,8 +89,16 @@ describe('CouchdbAdminController', () => {
       );
       expect(mockResponse.send).toHaveBeenCalledWith(
         expect.stringContaining(
-          'name,users,Child_all,Child_active,User_all,User_active',
+          'name,users,Child_all,Child_active,User_all,User_active,School_all,School_active',
         ),
+      );
+      // entity type only present in second row should still appear as column
+      expect(mockResponse.send).toHaveBeenCalledWith(
+        expect.stringContaining('0,0'), // School counts default to 0 for test1
+      );
+      // entity type only present in first row should have 0 values for second row
+      expect(mockResponse.send).toHaveBeenCalledWith(
+        expect.stringContaining('test2.example.com,5,30,28,0,0,2,2'),
       );
     });
 
