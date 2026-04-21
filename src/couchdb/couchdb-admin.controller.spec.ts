@@ -19,7 +19,10 @@ describe('CouchdbAdminController', () => {
     {
       name: 'test2.example.com',
       users: 5,
-      entities: { Child: { all: 30, active: 28 }, School: { all: 2, active: 2 } },
+      entities: {
+        Child: { all: 30, active: 28 },
+        School: { all: 2, active: 2 },
+      },
     },
   ];
 
