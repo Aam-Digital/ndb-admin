@@ -51,6 +51,7 @@ program
   .action((options) =>
     withApp(async ({ credentialsService, couchdbService }) => {
       const orgs = resolveOrgs(credentialsService, options);
+      if (!orgs) return 2;
       const runner = new OrgRunner(couchdbService);
 
       const results = await runner.checkConnectivity(orgs);
@@ -78,6 +79,7 @@ migrateCmd
       }
 
       const orgs = resolveOrgs(credentialsService, options);
+      if (!orgs) return 2;
       const runner = new OrgRunner(couchdbService);
       const logger = new ConsoleLogger(!!options.verbose);
 
@@ -179,7 +181,7 @@ async function withApp(
 function resolveOrgs(
   credentialsService: CredentialsService,
   options: { org?: string; category?: string },
-): SystemCredentials[] {
+): SystemCredentials[] | null {
   const orgs = OrgRunner.filterOrgs(
     credentialsService.getCredentials(),
     options,
@@ -189,7 +191,7 @@ function resolveOrgs(
       ? `--org "${options.org}"`
       : `--category "${options.category}"`;
     console.error(`\nNo orgs matched ${filter}.\n`);
-    process.exit(2);
+    return null;
   }
   return orgs;
 }

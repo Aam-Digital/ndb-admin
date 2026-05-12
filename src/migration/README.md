@@ -160,7 +160,7 @@ all instances.
 
 ## Module structure
 
-```
+```text
 src/migration/
 ├── README.md                          ← you are here
 ├── migration-definition.ts            ← MigrationContext / MigrationResult / MigrationDefinition interfaces

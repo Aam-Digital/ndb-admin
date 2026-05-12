@@ -42,7 +42,12 @@ export interface IdempotencyCheckResult {
  */
 export function buildStubCouchdb(store: DocStore): Couchdb {
   function key(path: string, db?: string): string {
-    return `${db ?? 'app'}/${path.replace(/^\//, '')}`;
+    const normalized = path.replace(/^\//, '');
+    if (db) {
+      return `${db}/${normalized}`;
+    }
+    // If the path already contains a db prefix (e.g. "app/Doc:ID"), use as-is
+    return normalized;
   }
 
   return {
@@ -50,7 +55,9 @@ export function buildStubCouchdb(store: DocStore): Couchdb {
       const k = key(path, db);
       const val = store[k];
       if (val === undefined) {
-        const err: any = new Error(`Not found: ${k}`);
+        const err = new Error(`Not found: ${k}`) as Error & {
+          response: { status: number };
+        };
         err.response = { status: 404 };
         throw err;
       }
@@ -125,8 +132,9 @@ function buildInMemoryContext(
   const validateJson = (value: unknown): void => {
     try {
       JSON.stringify(value);
-    } catch (e: any) {
-      throw new Error(`JSON validation failed: ${e.message}`);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      throw new Error(`JSON validation failed: ${message}`);
     }
   };
 

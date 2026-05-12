@@ -176,7 +176,7 @@ const migrateEntitySchemaDefaultValue: ConfigMigration = (
     return configPart;
   }
 
-  if (typeof configPart === 'object') {
+  if (typeof configPart === 'object' && configPart !== null) {
     return configPart;
   }
 
