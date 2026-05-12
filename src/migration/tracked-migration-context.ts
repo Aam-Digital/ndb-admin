@@ -27,8 +27,9 @@ export class TrackedMigrationContext implements MigrationContext {
   validateJson(value: unknown): void {
     try {
       JSON.stringify(value);
-    } catch (e: any) {
-      throw new Error(`JSON validation failed: ${e.message}`);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      throw new Error(`JSON validation failed: ${message}`);
     }
   }
 
@@ -58,7 +59,7 @@ export class TrackedMigrationContext implements MigrationContext {
     try {
       await this.couchdb.put(path, data, db, headers);
       this.succeeded++;
-    } catch (e) {
+    } catch (e: unknown) {
       this.failed++;
       throw e;
     }

@@ -21,11 +21,18 @@ export class CredentialsService {
   getCredentials(): SystemCredentials[] {
     const credentialsPath = this.resolveCredentialsPath();
     this.logger.log(`Loading credentials from ${credentialsPath}`);
-    const credentials: RawSystemCredential[] = JSON.parse(
-      readFileSync(credentialsPath, 'utf-8'),
-    );
+    let credentials: RawSystemCredential[];
+    try {
+      const fileContent = readFileSync(credentialsPath, 'utf-8');
+      credentials = JSON.parse(fileContent);
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      throw new Error(
+        `Failed to load credentials from ${credentialsPath}: ${errorMessage}`,
+      );
+    }
     return credentials.map((c) => ({
-      url: c.url ?? c['name'] + '.' + this.DEFAULT_DOMAIN,
+      url: c.url ?? c.name + '.' + this.DEFAULT_DOMAIN,
       name: c.name,
       password: c.password,
       username: c.username,

@@ -41,6 +41,7 @@ export interface IdempotencyCheckResult {
  *   - find(query, db?)       → naive full-store scan (docs array, no index)
  */
 export function buildStubCouchdb(store: DocStore): Couchdb {
+  let idCounter = 0;
   function key(path: string, db?: string): string {
     const normalized = path.replace(/^\//, '');
     if (db) {
@@ -56,8 +57,10 @@ export function buildStubCouchdb(store: DocStore): Couchdb {
       const val = store[k];
       if (val === undefined) {
         const err = new Error(`Not found: ${k}`) as Error & {
+          status: number;
           response: { status: number };
         };
+        err.status = 404;
         err.response = { status: 404 };
         throw err;
       }
@@ -71,7 +74,7 @@ export function buildStubCouchdb(store: DocStore): Couchdb {
     putAll: jest.fn(async (docs: any[], db?: string) => {
       const results: { ok: boolean; id: string }[] = [];
       for (const doc of docs) {
-        const id: string = doc._id ?? doc.id ?? String(Math.random());
+        const id: string = doc._id ?? doc.id ?? `generated-${idCounter++}`;
         store[key(id, db)] = JSON.parse(JSON.stringify(doc));
         results.push({ ok: true, id });
       }

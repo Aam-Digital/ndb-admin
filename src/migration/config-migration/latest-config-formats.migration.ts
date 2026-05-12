@@ -18,23 +18,30 @@ export const latestConfigFormats: MigrationDefinition = {
     'Transform any legacy config formats to their latest formats. Safe to re-run.',
 
   async run(ctx): Promise<MigrationResult> {
-    let config: any;
+    let config: unknown;
     try {
       config = await ctx.couchdb.get(CONFIG_DOC_PATH);
-    } catch {
-      return {
-        changed: false,
-        status: 'failed',
-        warnings: ['Config document not found'],
-      };
+    } catch (error: unknown) {
+      if ((error as { status?: number }).status === 404) {
+        return {
+          changed: false,
+          status: 'failed',
+          warnings: ['Config document not found'],
+        };
+      }
+      ctx.log.error(`Failed to load config document: ${error}`);
+      throw error;
     }
 
-    let newConfig: any = JSON.parse(JSON.stringify(config), (key, value) => {
-      for (const migration of ndbCoreConfigMigrations) {
-        value = migration(key, value);
-      }
-      return value;
-    });
+    let newConfig: unknown = JSON.parse(
+      JSON.stringify(config),
+      (key, value) => {
+        for (const migration of ndbCoreConfigMigrations) {
+          value = migration(key, value);
+        }
+        return value;
+      },
+    );
 
     ctx.validateJson(newConfig);
 
