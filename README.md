@@ -1,8 +1,10 @@
 # Aam Digital admin utilities
+
 A collection of simple operations to support server administration tasks of (multiple) hosted Aam Digital instances.
 (e.g. bulk search & replace in config files, statistics of entities across instances, ...)
 
 ## Usage
+
 This is not secured with authentication and should be deployed with other security measures in place.
 
 Have a look at the instructions in the [ndb-setup repo](https://github.com/Aam-Digital/ndb-setup/blob/master/admin/README.md) for deployment and usage through an SSH tunnel.
@@ -13,9 +15,25 @@ Once deployed visit `localhost:3000/api` to see the available endpoints and thei
 The endpoints which work across multiple instances iterate over all organisations listed in `credentials.json`.
 Further adjustments might have to be done in the `.env` file.
 
+## Migrations (CLI)
+
+Database migrations can be run via the CLI to apply bulk transformations across all (or selected) instances.
+
+```bash
+npm run build
+npm run cli -- migrate --help
+npm run cli -- migrate run latest-config-formats --dry-run
+```
+
+The CLI reads credentials from `src/assets/credentials.json` (same file as the HTTP service).
+Org names in `credentials.json` can be set via the optional `name` field and used with `--org`.
+
+See [`src/migration/README.md`](src/migration/README.md) for developer documentation on adding new migrations.
+
 ## Development
 
 ### Setup to run locally
+
 Also refer to the overall developer system guide: [aam-services/docs/developer](https://github.com/Aam-Digital/aam-services/blob/main/docs/developer/README.md).
 
 If facing issues with local self-signed certificates, you can set an environment variable `NODE_TLS_REJECT_UNAUTHORIZED=0` to disable ssl certificate validation.

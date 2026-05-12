@@ -1,6 +1,6 @@
+import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { catchError, firstValueFrom, map } from 'rxjs';
-import { HttpService } from '@nestjs/axios';
 import { SystemCredentials } from '../credentials/credentials.service';
 
 /**

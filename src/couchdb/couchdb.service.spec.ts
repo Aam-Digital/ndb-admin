@@ -1,7 +1,7 @@
+import { HttpService } from '@nestjs/axios';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CouchdbService } from './couchdb.service';
-import { ConfigService } from '@nestjs/config';
-import { HttpService } from '@nestjs/axios';
 
 describe('CouchdbService', () => {
   let service: CouchdbService;

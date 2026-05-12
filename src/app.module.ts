@@ -1,27 +1,20 @@
-import { Module } from '@nestjs/common';
-import { CouchdbAdminController } from './couchdb/couchdb-admin.controller';
 import { HttpModule } from '@nestjs/axios';
+import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { CouchdbAdminController } from './couchdb/couchdb-admin.controller';
 import { CouchdbService } from './couchdb/couchdb.service';
-import { KeycloakService } from './keycloak/keycloak.service';
-import { MigrationController } from './migration/migration.controller';
-import { KeycloakMigrationController } from './keycloak/keycloak-migration.controller';
-import { ConfigMigrationService } from './migration/config-migration/config-migration.service';
 import { SearchAndReplaceService } from './couchdb/search-and-replace/search-and-replace.service';
-import { CredentialsService } from './credentials/credentials.service';
 import { StatisticsService } from './couchdb/statistics/statistics.service';
+import { CredentialsService } from './credentials/credentials.service';
+import { KeycloakMigrationController } from './keycloak/keycloak-migration.controller';
+import { KeycloakService } from './keycloak/keycloak.service';
 
 @Module({
   imports: [HttpModule, ConfigModule.forRoot({ isGlobal: true })],
-  controllers: [
-    CouchdbAdminController,
-    MigrationController,
-    KeycloakMigrationController,
-  ],
+  controllers: [CouchdbAdminController, KeycloakMigrationController],
   providers: [
     CouchdbService,
     KeycloakService,
-    ConfigMigrationService,
     SearchAndReplaceService,
     CredentialsService,
     StatisticsService,
