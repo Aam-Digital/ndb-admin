@@ -19,6 +19,7 @@ export function printBanner(
 export function printOutcomes(
   outcomes: OrgOutcome<MigrationOutcome>[],
   showWriteStats: boolean,
+  verbose = false,
 ): void {
   for (const {
     org,
@@ -39,6 +40,11 @@ export function printOutcomes(
     console.log((STATUS_TAGS[result.status] ?? result.status) + suffix);
     if (result.warnings?.length) {
       result.warnings.forEach((w) => console.log(`    ! ${w}`));
+    }
+    if (verbose && result.details) {
+      String(result.details)
+        .split('\n')
+        .forEach((line) => console.log(`    ${line}`));
     }
   }
 }

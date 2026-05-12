@@ -2,15 +2,14 @@ import { NestFactory } from '@nestjs/core';
 import { Command } from 'commander';
 import * as readline from 'readline';
 import { AppModule } from './app.module';
-import { OrgRunner } from './cli/org-runner';
 import { printConnectivity } from './cli/org-output';
+import { OrgRunner } from './cli/org-runner';
 import { CouchdbService } from './couchdb/couchdb.service';
 import {
   CredentialsService,
   SystemCredentials,
 } from './credentials/credentials.service';
 import { ConsoleLogger } from './migration/console-logger';
-import { TrackedMigrationContext } from './migration/tracked-migration-context';
 import { failedMigrationResult } from './migration/migration-definition';
 import {
   computeExitCode,
@@ -19,6 +18,7 @@ import {
   printSummary,
 } from './migration/migration-output';
 import { migrations } from './migration/migrations';
+import { TrackedMigrationContext } from './migration/tracked-migration-context';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { version } = require('../package.json');
@@ -104,8 +104,12 @@ migrateCmd
             const result = await migration.run(ctx);
             return { result, writeStats: ctx.getWriteStats() };
           } catch (e: any) {
+            const result = failedMigrationResult(
+              e.message ?? String(e),
+            );
+            result.details = e.stack;
             return {
-              result: failedMigrationResult(e.message),
+              result,
               writeStats: ctx.getWriteStats(),
             };
           }
@@ -114,7 +118,7 @@ migrateCmd
       // Preview (always dry-run first)
       printBanner('PREVIEW', migration);
       const preview = await runMigration(true);
-      printOutcomes(preview, false);
+      printOutcomes(preview, false, !!options.verbose);
       printSummary(preview, unreachableCount);
 
       if (options.dryRun) {
@@ -141,7 +145,7 @@ migrateCmd
       // Real run
       printBanner('RUNNING', migration);
       const real = await runMigration(false);
-      printOutcomes(real, true);
+      printOutcomes(real, true, !!options.verbose);
       printSummary(real, unreachableCount);
 
       return computeExitCode(real, unreachableCount);
