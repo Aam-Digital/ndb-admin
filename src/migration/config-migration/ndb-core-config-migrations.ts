@@ -16,9 +16,7 @@ export type ConfigMigration = (key: string, configPart: any) => any;
  * containing id directly.
  */
 const migrateEntityAttributesWithId: ConfigMigration = (key, configPart) => {
-  if (
-    !(key.startsWith('entity') && Array.isArray(configPart?.attributes))
-  ) {
+  if (!(key.startsWith('entity') && Array.isArray(configPart?.attributes))) {
     return configPart;
   }
 
@@ -95,7 +93,11 @@ const migrateFormFieldConfigView2ViewComponent: ConfigMigration = (
 };
 
 const migrateMenuItemConfig: ConfigMigration = (key, configPart) => {
-  if (key !== 'navigationMenu' || typeof configPart !== 'object' || configPart === null) {
+  if (
+    key !== 'navigationMenu' ||
+    typeof configPart !== 'object' ||
+    configPart === null
+  ) {
     return configPart;
   }
 
@@ -125,7 +127,11 @@ const migrateEntityDetailsInputEntityType: ConfigMigration = (
   key,
   configPart,
 ) => {
-  if (key !== 'config' || typeof configPart !== 'object' || configPart === null) {
+  if (
+    key !== 'config' ||
+    typeof configPart !== 'object' ||
+    configPart === null
+  ) {
     return configPart;
   }
 

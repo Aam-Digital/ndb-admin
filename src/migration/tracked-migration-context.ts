@@ -86,20 +86,30 @@ export class TrackedMigrationContext implements MigrationContext {
       return;
     }
 
-    const changes = diff(oldData as Record<string, unknown>, newData as Record<string, unknown>, { cyclesFix: false });
+    const changes = diff(
+      oldData as Record<string, unknown>,
+      newData as Record<string, unknown>,
+      { cyclesFix: false },
+    );
     if (changes.length === 0) return;
 
     for (const change of changes) {
       const pathStr = change.path.join('.');
       switch (change.type) {
         case 'CREATE':
-          this.log.verbose(`  + ${pathStr}: ${truncate(JSON.stringify(change.value))}`);
+          this.log.verbose(
+            `  + ${pathStr}: ${truncate(JSON.stringify(change.value))}`,
+          );
           break;
         case 'REMOVE':
-          this.log.verbose(`  - ${pathStr}: ${truncate(JSON.stringify(change.oldValue))}`);
+          this.log.verbose(
+            `  - ${pathStr}: ${truncate(JSON.stringify(change.oldValue))}`,
+          );
           break;
         case 'CHANGE':
-          this.log.verbose(`  ~ ${pathStr}: ${truncate(JSON.stringify(change.oldValue))} → ${truncate(JSON.stringify(change.value))}`);
+          this.log.verbose(
+            `  ~ ${pathStr}: ${truncate(JSON.stringify(change.oldValue))} → ${truncate(JSON.stringify(change.value))}`,
+          );
           break;
       }
     }

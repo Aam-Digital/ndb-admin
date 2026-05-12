@@ -105,9 +105,7 @@ migrateCmd
             const result = await migration.run(ctx);
             return { result, writeStats: ctx.getWriteStats() };
           } catch (e: any) {
-            const result = failedMigrationResult(
-              e.message ?? String(e),
-            );
+            const result = failedMigrationResult(e.message ?? String(e));
             result.details = e.stack;
             return {
               result,
