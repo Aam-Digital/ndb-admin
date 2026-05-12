@@ -4,6 +4,8 @@ import { SystemCredentials } from '../credentials/credentials.service';
 export interface ConnectivityResult {
   org: SystemCredentials;
   reachable: boolean;
+  failureReason?: 'network' | 'auth';
+  errorDetail?: string;
 }
 
 export interface OrgOutcome<T> {
@@ -29,10 +31,22 @@ export class OrgRunner {
         org.username,
       );
       try {
-        await couchdb.get('/app');
-        results.push({ org, reachable: true });
-      } catch {
-        results.push({ org, reachable: false });
+        const session = await couchdb.get<{ userCtx?: { name: string } }>(
+          '/_session',
+        );
+        if (!session?.userCtx?.name) {
+          results.push({ org, reachable: false, failureReason: 'auth' });
+        } else {
+          results.push({ org, reachable: true });
+        }
+      } catch (e: any) {
+        const detail = e?.message ?? String(e);
+        results.push({
+          org,
+          reachable: false,
+          failureReason: 'network',
+          errorDetail: detail,
+        });
       }
     }
     return results;
