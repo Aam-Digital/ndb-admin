@@ -41,17 +41,14 @@ export const latestConfigFormats: MigrationDefinition = {
     const changed = JSON.stringify(config) !== JSON.stringify(newConfig);
 
     if (!changed) {
-      ctx.log.info('  No changes needed');
+      ctx.log.info('No changes needed');
       return {
         changed: false,
         status: 'no-change',
       };
     }
 
-    ctx.log.info('  Config requires migration');
-    if (ctx.dryRun) {
-      ctx.log.verbose('  ~ Config:CONFIG_ENTITY (migration would apply)');
-    }
+    ctx.log.info('Config requires migration');
 
     await ctx.put(CONFIG_DOC_PATH, newConfig);
 

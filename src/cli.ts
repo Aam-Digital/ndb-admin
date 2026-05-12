@@ -99,6 +99,7 @@ migrateCmd
 
       const runMigration = (dryRun: boolean) =>
         runner.runForEach(reachable, async (couchdb, org) => {
+          console.log(`\n  ${OrgRunner.orgLabel(org)}`);
           const ctx = new TrackedMigrationContext(couchdb, org, dryRun, logger);
           try {
             const result = await migration.run(ctx);
