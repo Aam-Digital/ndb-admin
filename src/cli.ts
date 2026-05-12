@@ -48,6 +48,7 @@ program
   .description('Check connectivity to all (or selected) orgs')
   .option('--org <orgs>', 'Comma-separated org names or URLs to target')
   .option('--category <category>', 'Filter orgs by credential category')
+  .option('--verbose', 'Show detailed error information')
   .action((options) =>
     withApp(async ({ credentialsService, couchdbService }) => {
       const orgs = resolveOrgs(credentialsService, options);
@@ -55,7 +56,7 @@ program
       const runner = new OrgRunner(couchdbService);
 
       const results = await runner.checkConnectivity(orgs);
-      printConnectivity(results);
+      printConnectivity(results, !!options.verbose);
 
       return results.some((r) => !r.reachable) ? 1 : 0;
     }),
