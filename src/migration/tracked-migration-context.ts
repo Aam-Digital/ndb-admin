@@ -58,6 +58,4 @@ export class TrackedMigrationContext implements MigrationContext {
       throw e;
     }
   }
-
-
 }
