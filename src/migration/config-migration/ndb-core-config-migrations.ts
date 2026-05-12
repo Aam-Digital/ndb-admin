@@ -1,75 +1,19 @@
-import { Injectable } from '@nestjs/common';
-import { Couchdb } from '../../couchdb/couchdb.service';
-import { migrateAddMissingEntityAttributes } from './migrate-add-entity-attributes';
-
 /**
- * Apply transformations to the Config document in the CouchDB,
- * using migration functions that are also used in the frontend (ndb-core).
- */
-@Injectable()
-export class ConfigMigrationService {
-  private async getConfigDoc(couchdb: Couchdb) {
-    return couchdb.get('/app/Config:CONFIG_ENTITY');
-  }
-
-  private async saveConfigDoc(couchdb: Couchdb, configDoc: any) {
-    return couchdb.put('/app/Config:CONFIG_ENTITY', configDoc);
-  }
-
-  private applyMigrations(config) {
-    const migrations: ConfigMigration[] = [
-      migrateEntityAttributesWithId,
-      migrateFormHeadersIntoFieldGroups,
-      migrateFormFieldConfigView2ViewComponent,
-      migrateMenuItemConfig,
-      migrateEntityDetailsInputEntityType,
-      migrateEntityArrayDatatype,
-      migrateEntitySchemaDefaultValue,
-      migrateChildrenListConfig,
-      migrateHistoricalDataComponent,
-    ];
-
-    const newConfig = JSON.parse(JSON.stringify(config), (_that, rawValue) => {
-      let configPart = rawValue;
-      for (const migration of migrations) {
-        configPart = migration(_that, configPart);
-      }
-      return configPart;
-    });
-
-    return newConfig;
-  }
-
-  /**
-   * apply all currently registered config format transformations, similar to the frontend, on-the-fly migrations.
-   * @param couchdb
-   */
-  async migrateToLatestConfigFormats(couchdb: Couchdb) {
-    const config = await this.getConfigDoc(couchdb);
-    let newConfig = this.applyMigrations(config);
-
-    newConfig = migrateAddMissingEntityAttributes(newConfig);
-
-    await this.saveConfigDoc(couchdb, newConfig);
-    return JSON.stringify(config) !== JSON.stringify(newConfig);
-  }
-}
-
-/**
- * A ConfigMigration is checked during a full JSON.parse using a reviver function.
- * If the migration does not apply to the given configPart, make sure to return it unchanged.
- * Multiple migrations are chained and can transform the same config part one after the other.
+ * Individual config migrations copied from ndb-core ConfigService.
  *
- * --> see ndb-core (!)
+ * Source: https://github.com/Aam-Digital/ndb-core/blob/master/src/app/core/config/config.service.ts
  */
-type ConfigMigration = (key: string, configPart: any) => any;
-
-//
-// COPIED FROM ndb-core ConfigService migrations:
-//
 
 /**
- * Transform legacy "entity:" config format into the flattened structure containing id directly.
+ * A ConfigMigration is applied during a JSON.parse using a reviver function.
+ * If the migration does not apply to the given configPart, return it unchanged.
+ * Multiple migrations are chained and can transform the same config part one after the other.
+ */
+export type ConfigMigration = (key: string, configPart: any) => any;
+
+/**
+ * Transform legacy "entity:" config format into the flattened structure
+ * containing id directly.
  */
 const migrateEntityAttributesWithId: ConfigMigration = (key, configPart) => {
   if (!(key.startsWith('entity') && Array.isArray(configPart.attributes))) {
@@ -77,10 +21,9 @@ const migrateEntityAttributesWithId: ConfigMigration = (key, configPart) => {
   }
 
   configPart.attributes = configPart.attributes.reduce(
-    (acc, attr: { name: string; schema }) => ({
+    (acc, attr: { name: string; schema: unknown }) => ({
       ...acc,
       [attr.name]: attr.schema,
-      // id inside the field schema config (FieldConfig) is added by EntityConfigService and does not need migration
     }),
     {},
   );
@@ -89,7 +32,8 @@ const migrateEntityAttributesWithId: ConfigMigration = (key, configPart) => {
 };
 
 /**
- * Transform legacy "view:...Form" config format to have form field group headers with the fields rather than as separate array.
+ * Transform legacy "view:...Form" config format to have form field group
+ * headers with the fields rather than as a separate array.
  */
 const migrateFormHeadersIntoFieldGroups: ConfigMigration = (
   key,
@@ -101,7 +45,6 @@ const migrateFormHeadersIntoFieldGroups: ConfigMigration = (
 
   const formConfig = configPart.config;
 
-  // change .cols and .headers into .fieldGroups
   const newFormConfig = { ...formConfig };
   delete newFormConfig.cols;
   delete newFormConfig.headers;
@@ -157,7 +100,7 @@ const migrateMenuItemConfig: ConfigMigration = (key, configPart) => {
   const oldItems: any[] = configPart.items;
 
   configPart.items = oldItems.map((item) => {
-    if (item.hasOwnProperty('name')) {
+    if (Object.prototype.hasOwnProperty.call(item, 'name')) {
       return {
         label: item['name'],
         icon: item.icon,
@@ -172,10 +115,9 @@ const migrateMenuItemConfig: ConfigMigration = (key, configPart) => {
 };
 
 /**
- * Config properties specifying an entityType should be named "entityType" rather than "entity"
- * to avoid confusion with a specific instance of an entity being passed in components.
- * @param key
- * @param configPart
+ * Config properties specifying an entityType should be named "entityType"
+ * rather than "entity" to avoid confusion with a specific instance of an
+ * entity being passed in components.
  */
 const migrateEntityDetailsInputEntityType: ConfigMigration = (
   key,
@@ -194,16 +136,15 @@ const migrateEntityDetailsInputEntityType: ConfigMigration = (
 };
 
 /**
- * Replace custom "entity-array" dataType with dataType="array", innerDatatype="entity"
- * @param key
- * @param configPart
+ * Replace custom "entity-array" dataType with dataType="array",
+ * innerDatatype="entity".
  */
 const migrateEntityArrayDatatype: ConfigMigration = (key, configPart) => {
   if (configPart === 'DisplayEntityArray') {
     return 'DisplayEntity';
   }
 
-  if (!configPart?.hasOwnProperty('dataType')) {
+  if (!Object.prototype.hasOwnProperty.call(configPart, 'dataType')) {
     return configPart;
   }
 
@@ -235,11 +176,11 @@ const migrateEntitySchemaDefaultValue: ConfigMigration = (
     return configPart;
   }
 
-  if (typeof configPart == 'object') {
+  if (typeof configPart === 'object') {
     return configPart;
   }
 
-  let placeholderValue: string | undefined = ['$now', '$current_user'].find(
+  const placeholderValue: string | undefined = ['$now', '$current_user'].find(
     (value) => value === configPart,
   );
 
@@ -292,3 +233,18 @@ const migrateHistoricalDataComponent: ConfigMigration = (key, configPart) => {
 
   return configPart;
 };
+
+/**
+ * All ndb-core config migrations, in order.
+ */
+export const ndbCoreConfigMigrations: ConfigMigration[] = [
+  migrateEntityAttributesWithId,
+  migrateFormHeadersIntoFieldGroups,
+  migrateFormFieldConfigView2ViewComponent,
+  migrateMenuItemConfig,
+  migrateEntityDetailsInputEntityType,
+  migrateEntityArrayDatatype,
+  migrateEntitySchemaDefaultValue,
+  migrateChildrenListConfig,
+  migrateHistoricalDataComponent,
+];

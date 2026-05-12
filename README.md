@@ -13,6 +13,21 @@ Once deployed visit `localhost:3000/api` to see the available endpoints and thei
 The endpoints which work across multiple instances iterate over all organisations listed in `credentials.json`.
 Further adjustments might have to be done in the `.env` file.
 
+## Migrations (CLI)
+
+Database migrations can be run via the CLI to apply bulk transformations across all (or selected) instances.
+
+```bash
+npm run build
+npm run cli -- migrate --help
+npm run cli -- migrate run latest-config-formats --dry-run
+```
+
+The CLI reads credentials from `src/assets/credentials.json` (same file as the HTTP service).
+Org names in `credentials.json` can be set via the optional `name` field and used with `--org`.
+
+See [`src/migration/README.md`](src/migration/README.md) for developer documentation on adding new migrations.
+
 ## Development
 
 ### Setup to run locally
