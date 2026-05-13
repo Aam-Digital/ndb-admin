@@ -1,7 +1,7 @@
 import {
-    buildTestContext,
-    DocStore,
-    runIdempotencyCheck,
+  buildTestContext,
+  DocStore,
+  runIdempotencyCheck,
 } from '../testing/migration-idempotency.harness';
 import { codoAddEventType } from './codo-add-event-type.migration';
 
@@ -102,9 +102,9 @@ describe('codoAddEventType migration', () => {
     ).toEqual(['ChildSchoolRelation', 'event']);
 
     // Note relatedEntities label renamed
-    expect(
-      config.data['entity:Note'].attributes.relatedEntities.label,
-    ).toBe('Sonstige verknüpfte Datensätze');
+    expect(config.data['entity:Note'].attributes.relatedEntities.label).toBe(
+      'Sonstige verknüpfte Datensätze',
+    );
 
     // Todo relatedEntities updated (array += event)
     expect(
