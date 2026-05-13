@@ -41,6 +41,20 @@ export class TrackedMigrationContext implements MigrationContext {
     };
   }
 
+  async addDocIfMissing(path: string, template: unknown): Promise<boolean> {
+    try {
+      await this.couchdb.get(path);
+      this.log.info(`${path} already exists, skipping`);
+      return false;
+    } catch (error: unknown) {
+      if ((error as { status?: number }).status !== 404) {
+        throw error;
+      }
+    }
+    await this.put(path, template);
+    return true;
+  }
+
   async put(
     path: string,
     data: unknown,

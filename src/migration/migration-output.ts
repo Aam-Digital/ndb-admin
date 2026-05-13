@@ -21,6 +21,7 @@ export function printOutcomes(
   showWriteStats: boolean,
   verbose = false,
 ): void {
+  console.log('\n── Summary: Status per org ──');
   for (const {
     org,
     result: { result, writeStats },

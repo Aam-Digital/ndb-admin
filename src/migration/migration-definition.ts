@@ -37,6 +37,12 @@ export interface MigrationContext {
    * Run this before constructing any write payload.
    */
   validateJson(value: unknown): void;
+  /**
+   * Write a document only if it does not already exist.
+   * Returns true when the document was created, false when it was already present.
+   * Throws on unexpected errors (anything other than 404).
+   */
+  addDocIfMissing(path: string, template: unknown): Promise<boolean>;
 }
 
 /**
