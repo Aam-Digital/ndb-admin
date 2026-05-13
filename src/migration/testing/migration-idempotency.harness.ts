@@ -106,7 +106,7 @@ export function buildStubCouchdb(store: DocStore): Couchdb {
   } as unknown as Couchdb;
 }
 
-const silentLogger: MigrationLogger = {
+export const silentLogger: MigrationLogger = {
   info: () => {},
   warn: () => {},
   error: () => {},
@@ -120,9 +120,9 @@ const fakeOrg: SystemCredentials = {
   name: 'test',
 };
 
-function buildInMemoryContext(
+export function buildTestContext(
   store: DocStore,
-  dryRun: boolean,
+  dryRun = false,
 ): MigrationContext & { store: DocStore } {
   const stubCouchdb = buildStubCouchdb(store);
 
@@ -154,6 +154,18 @@ function buildInMemoryContext(
       await stubCouchdb.put(path, data, db);
       writes.succeeded++;
     },
+    async addDocIfMissing(path, template) {
+      try {
+        await stubCouchdb.get(path);
+        return false;
+      } catch (error: unknown) {
+        if ((error as { status?: number }).status !== 404) {
+          throw error;
+        }
+      }
+      await this.put(path, template);
+      return true;
+    },
     store,
   };
 }
@@ -172,13 +184,13 @@ export async function runIdempotencyCheck(
 ): Promise<IdempotencyCheckResult> {
   // First run
   const store1: DocStore = JSON.parse(JSON.stringify(initialDocs));
-  const ctx1 = buildInMemoryContext(store1, false);
+  const ctx1 = buildTestContext(store1, false);
   const firstRunResult = await migration.run(ctx1);
   const stateAfterFirstRun: DocStore = JSON.parse(JSON.stringify(store1));
 
   // Second run — same store state as left after first run
   const store2: DocStore = JSON.parse(JSON.stringify(stateAfterFirstRun));
-  const ctx2 = buildInMemoryContext(store2, false);
+  const ctx2 = buildTestContext(store2, false);
   const secondRunResult = await migration.run(ctx2);
   const stateAfterSecondRun: DocStore = JSON.parse(JSON.stringify(store2));
 

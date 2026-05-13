@@ -41,6 +41,20 @@ export class TrackedMigrationContext implements MigrationContext {
     };
   }
 
+  async addDocIfMissing(path: string, template: unknown): Promise<boolean> {
+    try {
+      await this.couchdb.get(path);
+      this.log.info(`${path} already exists, skipping`);
+      return false;
+    } catch (error: unknown) {
+      if (!is404Error(error)) {
+        throw error;
+      }
+    }
+    await this.put(path, template);
+    return true;
+  }
+
   async put(
     path: string,
     data: unknown,
@@ -120,4 +134,10 @@ export class TrackedMigrationContext implements MigrationContext {
 function truncate(str: string | undefined, max = 200): string {
   if (!str) return '(undefined)';
   return str.length > max ? str.slice(0, max) + '…' : str;
+}
+
+export function is404Error(error: unknown): boolean {
+  return (
+    (error as { response?: { status?: number } }).response?.status === 404
+  );
 }
