@@ -1,4 +1,10 @@
-# Aam Digital admin utilities
+> This repository is not maintained anymore.
+> Admin functionalities have been move to ndb-core CLI commands:
+> [ndb-core/cli](https://github.com/Aam-Digital/ndb-core/tree/master/cli)
+
+---
+
+# ~Aam Digital admin utilities~
 
 A collection of simple operations to support server administration tasks of (multiple) hosted Aam Digital instances.
 (e.g. bulk search & replace in config files, statistics of entities across instances, ...)
